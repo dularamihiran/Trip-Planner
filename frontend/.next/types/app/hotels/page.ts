@@ -1,8 +1,8 @@
-// File: E:\Trip-planning-web\trip-planner\frontend\src\app\trip\page.tsx
-import * as entry from '../../../../src/app/trip/page.js'
+// File: E:\Trip-planning-web\New folder\frontend\src\app\hotels\page.tsx
+import * as entry from '../../../../src/app/hotels/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../src/app/trip/page.js')
+type TEntry = typeof import('../../../../src/app/hotels/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{
