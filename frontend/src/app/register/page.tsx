@@ -2,20 +2,31 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AccountType } from '@/types/user';
+import { addTraveler } from '@/utils/mockTravelers';
+import { addHotelOwner, sriLankanDistricts } from '@/utils/mockHotels';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    accountType: 'traveler' as AccountType,
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'tourist' // tourist, hotel_owner, admin
+    // Traveler fields
+    fullName: '',
+    // Hotel owner fields
+    hotelName: '',
+    ownerName: '',
+    location: '',
+    contactNumber: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -30,6 +41,7 @@ export default function RegisterPage() {
       const newConfirmPassword = name === 'confirmPassword' ? value : formData.confirmPassword;
       setPasswordsMatch(newPassword === newConfirmPassword || newConfirmPassword === '');
     }
+    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,16 +53,50 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
+    setError('');
     
-    // TODO: Implement actual registration logic with AWS Cognito
-    console.log('Registration attempt:', formData);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (formData.accountType === 'traveler') {
+        if (!formData.fullName) {
+          setError('Full name is required for travelers');
+          return;
+        }
+        
+        const newTraveler = addTraveler({
+          name: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+          userType: 'traveler'
+        });
+        
+        // Store user session (in a real app, use proper auth)
+        localStorage.setItem('currentUser', JSON.stringify(newTraveler));
+        router.push('/dashboard');
+      } else {
+        if (!formData.hotelName || !formData.ownerName || !formData.location || !formData.contactNumber) {
+          setError('All fields are required for hotel owners');
+          return;
+        }
+        
+        const newHotelOwner = addHotelOwner({
+          ownerName: formData.ownerName,
+          email: formData.email,
+          password: formData.password,
+          userType: 'hotel_owner',
+          hotelName: formData.hotelName,
+          location: formData.location,
+          contactNumber: formData.contactNumber
+        });
+        
+        // Store user session (in a real app, use proper auth)
+        localStorage.setItem('currentUser', JSON.stringify(newHotelOwner));
+        router.push('/hotel-dashboard');
+      }
+    } catch (err) {
+      setError('Registration failed. Please try again.');
+    } finally {
       setIsLoading(false);
-      // For now, just show success - later integrate with Cognito
-      alert('Registration functionality will be implemented with AWS Cognito');
-    }, 2000);
+    }
   };
 
   return (
@@ -72,62 +118,161 @@ export default function RegisterPage() {
             </span>
           </Link>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Join Trip Planner</h2>
-          <p className="text-gray-600">Create your account to start planning amazing trips</p>
+          <p className="text-gray-600">Create your account to start your journey</p>
         </div>
 
         {/* Registration Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* User Type Selection */}
+            {/* Account Type Selection */}
             <div>
-              <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
-                Account Type
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Register as
               </label>
-              <select
-                id="userType"
-                name="userType"
-                value={formData.userType}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-              >
-                <option value="tourist">Tourist</option>
-                <option value="hotel_owner">Hotel Owner</option>
-              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`relative flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  formData.accountType === 'traveler'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}>
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="traveler"
+                    checked={formData.accountType === 'traveler'}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm font-medium">Traveler</span>
+                  </div>
+                </label>
+                <label className={`relative flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  formData.accountType === 'hotel_owner'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}>
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="hotel_owner"
+                    checked={formData.accountType === 'hotel_owner'}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-sm font-medium">Hotel Owner</span>
+                  </div>
+                </label>
+              </div>
             </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic Fields based on Account Type */}
+            {formData.accountType === 'traveler' ? (
+              // Traveler Fields
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
                 </label>
                 <input
                   type="text"
-                  id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="John"
+                  placeholder="Enter your full name"
                 />
               </div>
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
+            ) : (
+              // Hotel Owner Fields
+              <>
+                <div>
+                  <label htmlFor="hotelName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Hotel Name
+                  </label>
+                  <input
+                    type="text"
+                    id="hotelName"
+                    name="hotelName"
+                    value={formData.hotelName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
+                    placeholder="Enter hotel name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Owner Name
+                  </label>
+                  <input
+                    type="text"
+                    id="ownerName"
+                    name="ownerName"
+                    value={formData.ownerName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
+                    placeholder="Enter owner name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                    Location (District)
+                  </label>
+                  <select
+                    id="location"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
+                  >
+                    <option value="">Select a district</option>
+                    {sriLankanDistricts.map(district => (
+                      <option key={district} value={district}>{district}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="contactNumber"
+                    name="contactNumber"
+                    value={formData.contactNumber}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
+                    placeholder="+94 XX XXX XXXX"
+                  />
+                </div>
+              </>
+            )}
 
             {/* Email Field */}
             <div>
@@ -143,7 +288,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="john@example.com"
+                  placeholder="Enter your email"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +399,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading || !passwordsMatch}
-              className={`w-full btn-primary ${
+              className={`w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 ${
                 isLoading || !passwordsMatch ? 'opacity-75 cursor-not-allowed' : ''
               }`}
             >
@@ -267,7 +412,7 @@ export default function RegisterPage() {
                   Creating Account...
                 </div>
               ) : (
-                'Create Account'
+                `Create ${formData.accountType === 'traveler' ? 'Traveler' : 'Hotel Owner'} Account`
               )}
             </button>
           </form>
@@ -288,7 +433,7 @@ export default function RegisterPage() {
           <div className="mt-6">
             <Link
               href="/login"
-              className="w-full btn-secondary text-center block"
+              className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 text-center block"
             >
               Sign In Instead
             </Link>
