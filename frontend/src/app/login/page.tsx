@@ -2,40 +2,60 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AccountType } from '@/types/user';
+import { authenticateTraveler } from '@/utils/mockTravelers';
+import { authenticateHotelOwner } from '@/utils/mockHotels';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    accountType: 'traveler' as AccountType
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // TODO: Implement actual login logic with AWS Cognito
-    console.log('Login attempt:', formData);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // For now, redirect to dashboard on successful login
-      // Later this will be conditional based on actual authentication
-      if (formData.email && formData.password) {
-        window.location.href = '/dashboard';
+    try {
+      if (formData.accountType === 'traveler') {
+        const traveler = authenticateTraveler(formData.email, formData.password);
+        if (traveler) {
+          // Store user session (in a real app, use proper auth)
+          localStorage.setItem('currentUser', JSON.stringify(traveler));
+          router.push('/dashboard');
+        } else {
+          setError('Invalid email or password for traveler account');
+        }
       } else {
-        alert('Please fill in all fields');
+        const hotelOwner = authenticateHotelOwner(formData.email, formData.password);
+        if (hotelOwner) {
+          // Store user session (in a real app, use proper auth)
+          localStorage.setItem('currentUser', JSON.stringify(hotelOwner));
+          router.push('/hotel-dashboard');
+        } else {
+          setError('Invalid email or password for hotel owner account');
+        }
       }
-    }, 2000);
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -57,12 +77,75 @@ export default function LoginPage() {
             </span>
           </Link>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back!</h2>
-          <p className="text-gray-600">Sign in to plan your perfect Sri Lankan adventure</p>
+          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
         {/* Login Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Account Type Selection */}
+            <div>
+              <label htmlFor="accountType" className="block text-sm font-medium text-gray-700 mb-2">
+                Login as
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className={`relative flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  formData.accountType === 'traveler'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}>
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="traveler"
+                    checked={formData.accountType === 'traveler'}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm font-medium">Traveler</span>
+                  </div>
+                </label>
+                <label className={`relative flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  formData.accountType === 'hotel_owner'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}>
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="hotel_owner"
+                    checked={formData.accountType === 'hotel_owner'}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-sm font-medium">Hotel Owner</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -77,7 +160,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="Enter your email"
+                  placeholder={formData.accountType === 'hotel_owner' ? 'owner@hotel.com' : 'Enter your email'}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +184,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-                  placeholder="Enter your password"
+                  placeholder={formData.accountType === 'hotel_owner' ? 'owner123' : 'Enter your password'}
                 />
                 <button
                   type="button"
@@ -121,6 +204,22 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Demo Credentials Info */}
+            {formData.accountType === 'hotel_owner' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-800">
+                      Demo credentials: owner@hotel.com / owner123
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
@@ -144,7 +243,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full btn-primary ${
+              className={`w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 ${
                 isLoading ? 'opacity-75 cursor-not-allowed' : ''
               }`}
             >
@@ -157,7 +256,7 @@ export default function LoginPage() {
                   Signing in...
                 </div>
               ) : (
-                'Sign In'
+                `Login as ${formData.accountType === 'traveler' ? 'Traveler' : 'Hotel Owner'}`
               )}
             </button>
           </form>
@@ -178,7 +277,7 @@ export default function LoginPage() {
           <div className="mt-6">
             <Link
               href="/register"
-              className="w-full btn-secondary text-center block"
+              className="w-full py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 text-center block"
             >
               Create New Account
             </Link>
