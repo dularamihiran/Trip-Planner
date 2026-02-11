@@ -1,26 +1,6 @@
-import { User, UserProfile } from '@/types/user';
-
-export const mockUser: User = {
-  userId: 'user-001',
-  fullName: 'Sarah Johnson',
-  email: 'sarah.johnson@email.com',
-  phoneNumber: '+1 (555) 123-4567',
-  country: 'United States',
-  bio: 'Travel enthusiast with a passion for exploring Sri Lanka\'s rich culture and natural beauty. I love discovering hidden gems and sharing travel experiences with fellow adventurers.',
-  profilePicture: '', // Will be empty initially for default avatar
-  joinedDate: '2024-01-15',
-  lastActive: '2025-08-28'
-};
-
-export const mockUserProfile: UserProfile = {
-  user: mockUser,
-  stats: {
-    totalTrips: 12,
-    completedTrips: 8,
-    placesVisited: 45,
-    favoriteDestination: 'Kandy'
-  }
-};
+/**
+ * User utility functions
+ */
 
 // Available countries for dropdown
 export const countries = [

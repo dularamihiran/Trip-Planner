@@ -5,8 +5,9 @@ export interface Place {
   name: string;
   district: string;
   category: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
+  visitStatus?: 'PLANNED' | 'DONE';
 }
 
 export interface Booking {
@@ -25,8 +26,8 @@ export interface Trip {
   startDate: string;
   endDate: string;
   districts: string[];
-  places: Place[];
-  bookings: Booking[];
+  places?: Place[];
+  bookings?: Booking[];
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED";
 }
 

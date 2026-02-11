@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { AdminUser } from '@/types/admin';
-import { getDefaultAvatar, formatDate } from '@/utils/mockUsers';
+import { getDefaultAvatar, formatDate } from '@/utils/adminUtils';
 
 interface UserDetailsModalProps {
   user: AdminUser | null;

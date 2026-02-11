@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { AdminUser } from '@/types/admin';
-import { getDefaultAvatar, getRoleBadgeColor, formatDate } from '@/utils/mockUsers';
+import { getDefaultAvatar, getRoleBadgeColor, formatDate } from '@/utils/adminUtils';
 
 interface UserRowProps {
   user: AdminUser;

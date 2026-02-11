@@ -35,19 +35,19 @@ const EditForm: React.FC<EditFormProps> = ({ user, onSave, onCancel }) => {
     }
 
     // Phone Number validation
-    if (!formData.phoneNumber.trim()) {
+    if (!formData.phoneNumber || !formData.phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required';
     } else if (!validatePhoneNumber(formData.phoneNumber)) {
       newErrors.phoneNumber = 'Please enter a valid phone number';
     }
 
     // Country validation
-    if (!formData.country.trim()) {
+    if (!formData.country || !formData.country.trim()) {
       newErrors.country = 'Country is required';
     }
 
     // Bio validation (optional but limit length)
-    if (formData.bio.length > 500) {
+    if (formData.bio && formData.bio.length > 500) {
       newErrors.bio = 'Bio must be less than 500 characters';
     }
 
@@ -124,7 +124,7 @@ const EditForm: React.FC<EditFormProps> = ({ user, onSave, onCancel }) => {
         <input
           type="tel"
           id="phoneNumber"
-          value={formData.phoneNumber}
+          value={formData.phoneNumber || ''}
           onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors ${
             errors.phoneNumber ? 'border-red-500' : 'border-gray-300'
@@ -143,7 +143,7 @@ const EditForm: React.FC<EditFormProps> = ({ user, onSave, onCancel }) => {
         </label>
         <select
           id="country"
-          value={formData.country}
+          value={formData.country || ''}
           onChange={(e) => handleInputChange('country', e.target.value)}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors ${
             errors.country ? 'border-red-500' : 'border-gray-300'
@@ -168,7 +168,7 @@ const EditForm: React.FC<EditFormProps> = ({ user, onSave, onCancel }) => {
         </label>
         <textarea
           id="bio"
-          value={formData.bio}
+          value={formData.bio || ''}
           onChange={(e) => handleInputChange('bio', e.target.value)}
           rows={4}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none ${
@@ -184,7 +184,7 @@ const EditForm: React.FC<EditFormProps> = ({ user, onSave, onCancel }) => {
             <p className="text-xs text-gray-500">Share your travel interests and experiences</p>
           )}
           <p className="text-xs text-gray-500">
-            {formData.bio.length}/500
+            {(formData.bio || '').length}/500
           </p>
         </div>
       </div>

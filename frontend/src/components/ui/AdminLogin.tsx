@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { validateAdminCredentials } from '@/utils/mockUsers';
+import { validateAdminCredentials } from '@/utils/adminUtils';
 
 interface AdminLoginProps {
   onLoginSuccess: () => void;
@@ -19,16 +19,36 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('🔐 Admin Login - Email:', email);
+      console.log('🔐 Admin Login - Password:', password);
 
-      if (validateAdminCredentials(email, password)) {
+      // Call backend API for admin authentication
+      const response = await fetch('http://localhost:5000/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('✅ Admin login successful:', data);
+        // Store admin token and user info
+        if (data.data.token) {
+          sessionStorage.setItem('adminToken', data.data.token);
+        }
+        if (data.data.user) {
+          sessionStorage.setItem('adminUser', JSON.stringify(data.data.user));
+        }
         onLoginSuccess();
       } else {
-        setError('Invalid email or password. Please try again.');
+        setError(data.error || 'Invalid email or password. Please try again.');
       }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      console.error('❌ Admin login error:', err);
+      setError('Login failed. Please make sure the backend server is running.');
     } finally {
       setLoading(false);
     }

@@ -10,9 +10,7 @@ interface TripPlaceListProps {
   onRemovePlace: (placeId: string) => void;
 }
 
-interface PlaceWithStatus extends Place {
-  visitStatus?: 'DONE' | 'NEXT' | 'UPCOMING';
-}
+type VisitStatus = 'DONE' | 'NEXT' | 'UPCOMING';
 
 const TripPlaceList: React.FC<TripPlaceListProps> = ({ 
   places, 
@@ -23,18 +21,25 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
   const [isOpen, setIsOpen] = useState(true);
   const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({});
 
-  // Mock visit status based on trip progress (in real app, this would come from API)
-  const getPlaceStatus = (index: number): 'DONE' | 'NEXT' | 'UPCOMING' => {
-    if (tripStatus === 'PLANNED') return 'UPCOMING';
+  // Get visit status based on actual data
+  const getPlaceStatus = (place: Place, index: number): VisitStatus => {
+    // If place is marked as done, return DONE
+    if (place.visitStatus === 'DONE') return 'DONE';
+    
+    // If trip is completed, all places are done
     if (tripStatus === 'COMPLETED') return 'DONE';
     
-    // For IN_PROGRESS trips, simulate some places being done
-    if (index === 0) return 'DONE';
-    if (index === 1) return 'NEXT';
+    // If trip is planned, all places are upcoming
+    if (tripStatus === 'PLANNED') return 'UPCOMING';
+    
+    // For IN_PROGRESS trips, find the first non-done place and mark it as NEXT
+    const firstNonDoneIndex = places.findIndex(p => p.visitStatus !== 'DONE');
+    if (index === firstNonDoneIndex) return 'NEXT';
+    
     return 'UPCOMING';
   };
 
-  const getStatusBadge = (status: 'DONE' | 'NEXT' | 'UPCOMING') => {
+  const getStatusBadge = (status: VisitStatus) => {
     switch (status) {
       case 'DONE':
         return 'bg-green-100 text-green-800 border-green-200';
@@ -45,7 +50,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
     }
   };
 
-  const getStatusIcon = (status: 'DONE' | 'NEXT' | 'UPCOMING') => {
+  const getStatusIcon = (status: VisitStatus) => {
     switch (status) {
       case 'DONE':
         return (
@@ -93,7 +98,8 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
     }
   };
 
-  const doneCount = places.filter((_, index) => getPlaceStatus(index) === 'DONE').length;
+  // Calculate actual progress based on visit status
+  const doneCount = places.filter(place => place.visitStatus === 'DONE').length;
   const totalPlaces = places.length;
 
   return (
@@ -145,7 +151,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
           {places.length > 0 ? (
             <div className="space-y-3">
               {places.map((place, index) => {
-                const status = getPlaceStatus(index);
+                const status = getPlaceStatus(place, index);
                 const isLoading = loadingStates[place.placeId];
                 const isRemoving = loadingStates[`remove-${place.placeId}`];
                 
@@ -188,9 +194,11 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
                             <span className="bg-gray-200 px-2 py-0.5 rounded text-xs">
                               {place.category}
                             </span>
-                            <span className="text-gray-400">
-                              ({place.lat.toFixed(4)}, {place.lng.toFixed(4)})
-                            </span>
+                            {place.lat != null && place.lng != null && (
+                              <span className="text-gray-400">
+                                ({place.lat.toFixed(4)}, {place.lng.toFixed(4)})
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

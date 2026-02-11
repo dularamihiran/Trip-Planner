@@ -125,7 +125,7 @@ export default function FilterBar({ filters, districts, onFilterChange, resultCo
               <span> in <span className="font-semibold">{filters.district}</span></span>
             )}
             {filters.searchQuery && (
-              <span> matching "<span className="font-semibold">{filters.searchQuery}</span>"</span>
+              <span> matching &ldquo;<span className="font-semibold">{filters.searchQuery}</span>&rdquo;</span>
             )}
           </div>
 
