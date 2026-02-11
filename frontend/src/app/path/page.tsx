@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import PlaceList from '@/components/ui/PlaceList';
-import MapComponent from '@/components/ui/MapComponent';
+import FreeMapComponent from '@/components/ui/FreeMapComponent';
 import SearchBar from '@/components/ui/SearchBar';
 
 // Type definitions
@@ -83,33 +83,87 @@ const mockSuggestedPlaces: Place[] = [
 ];
 
 export default function PathCreationPage() {
-  const [suggestedPlaces, setSuggestedPlaces] = useState<Place[]>(mockSuggestedPlaces);
+  const [suggestedPlaces, setSuggestedPlaces] = useState<Place[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const [totalDuration, setTotalDuration] = useState<string>('');
   const [mapCenter, setMapCenter] = useState({ lat: 7.8731, lng: 80.7718 }); // Sri Lanka center
+  const [tripInfo, setTripInfo] = useState<any>(null);
+
+  // Load suggestions from localStorage on mount
+  useEffect(() => {
+    const storedPlaces = localStorage.getItem('suggestedPlaces');
+    const storedTripData = localStorage.getItem('tripData');
+    const storedSummary = localStorage.getItem('suggestionsSummary');
+
+    if (storedPlaces) {
+      try {
+        const apiPlaces = JSON.parse(storedPlaces);
+        
+        // Transform API place format to our Place interface
+        const transformedPlaces: Place[] = apiPlaces.map((place: any) => ({
+          id: place.placeId,
+          name: place.name,
+          category: place.category,
+          address: place.district,
+          lat: place.lat,
+          lng: place.lng,
+          description: place.description,
+          isSelected: false
+        }));
+        
+        setSuggestedPlaces(transformedPlaces);
+        
+        // Set map center to first place
+        if (transformedPlaces.length > 0) {
+          setMapCenter({ lat: transformedPlaces[0].lat, lng: transformedPlaces[0].lng });
+        }
+      } catch (error) {
+        console.error('Error loading suggestions:', error);
+        // Fallback to mock data
+        setSuggestedPlaces(mockSuggestedPlaces);
+      }
+    } else {
+      // No suggestions in storage, use mock data
+      setSuggestedPlaces(mockSuggestedPlaces);
+    }
+
+    if (storedTripData) {
+      try {
+        setTripInfo(JSON.parse(storedTripData));
+      } catch (error) {
+        console.error('Error loading trip data:', error);
+      }
+    }
+  }, []);
 
   // Calculate route statistics when selected places change
   useEffect(() => {
     const calculateRouteStats = () => {
-      // Mock calculation - in real implementation, use Google Directions API
+      // Proper Haversine formula for accurate distance calculation
       let distance = 0;
       for (let i = 0; i < selectedPlaces.length - 1; i++) {
         const place1 = selectedPlaces[i];
         const place2 = selectedPlaces[i + 1];
         
-        // Simple distance calculation (Haversine formula approximation)
-        const deltaLat = place2.lat - place1.lat;
-        const deltaLng = place2.lng - place1.lng;
-        const approxDistance = Math.sqrt(deltaLat * deltaLat + deltaLng * deltaLng) * 111; // rough km conversion
-        distance += approxDistance;
+        // Haversine formula for great-circle distance
+        const R = 6371; // Earth's radius in km
+        const dLat = (place2.lat - place1.lat) * Math.PI / 180;
+        const dLng = (place2.lng - place1.lng) * Math.PI / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(place1.lat * Math.PI / 180) * Math.cos(place2.lat * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const segmentDistance = R * c;
+        distance += segmentDistance;
       }
       
       setTotalDistance(Math.round(distance));
       
-      // Estimate driving time (assuming average 50km/h)
-      const hours = Math.floor(distance / 50);
-      const minutes = Math.round((distance % 50) * 1.2); // rough estimate
+      // Estimate driving time (assuming average 40km/h for Sri Lankan roads)
+      const hours = Math.floor(distance / 40);
+      const minutes = Math.round((distance % 40) * 1.5);
       setTotalDuration(`${hours}h ${minutes}m`);
     };
 
@@ -147,14 +201,84 @@ export default function PathCreationPage() {
     setSelectedPlaces(prev => [...prev, { ...newPlace, isSelected: true }]);
   };
 
-  const handleSaveTripPlan = () => {
-    // TODO: Implement save functionality with backend
-    console.log('Saving trip plan:', {
-      selectedPlaces,
-      totalDistance,
-      totalDuration
-    });
-    alert(`Trip plan saved!\nPlaces: ${selectedPlaces.length}\nDistance: ${totalDistance}km\nDuration: ${totalDuration}`);
+  const handleSaveTripPlan = async () => {
+    if (selectedPlaces.length === 0) {
+      alert('Please select at least one place to visit');
+      return;
+    }
+
+    try {
+      // Get user from localStorage
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        alert('Please login to save your trip');
+        window.location.href = '/login';
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      
+      // Create trip in MongoDB
+      const tripResponse = await fetch('http://localhost:5000/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.userId,
+          tripName: tripInfo?.name || 'My Sri Lankan Adventure',
+          startDate: tripInfo?.startDate || new Date().toISOString().split('T')[0],
+          endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
+          districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
+          budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
+          description: `Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance`
+        }),
+      });
+
+      const tripData = await tripResponse.json();
+      
+      if (!tripData.trip) {
+        throw new Error(tripData.error || 'Failed to create trip');
+      }
+
+      const tripId = tripData.trip.tripId;
+      
+      // Add all selected places to the trip
+      for (const place of selectedPlaces) {
+        await fetch(`http://localhost:5000/api/trips/${tripId}/places`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: place.name,
+            category: place.category,
+            district: place.address,
+            latitude: place.lat,
+            longitude: place.lng,
+            description: place.description
+          }),
+        });
+      }
+
+      console.log('✅ Trip saved successfully!', tripData);
+      
+      // Save trip plan data to localStorage for hotel suggestions
+      const tripPlan = {
+        tripId,
+        selectedPlaces,
+        totalDistance,
+        totalDuration,
+        districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
+        savedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('savedTripPlan', JSON.stringify(tripPlan));
+      
+      alert('🎉 Trip saved successfully! Now let\'s find some hotels.');
+      
+      // Navigate to hotels page to see hotel suggestions
+      window.location.href = '/hotels';
+    } catch (error: any) {
+      console.error('Error saving trip:', error);
+      alert('Failed to save trip: ' + error.message);
+    }
   };
 
   const reorderSelectedPlaces = (fromIndex: number, toIndex: number) => {
@@ -172,10 +296,17 @@ export default function PathCreationPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create Your Travel Path
+            {tripInfo?.name || 'Create Your Travel Path'}
           </h1>
           <p className="text-gray-600">
-            Select places to visit and plan your route through Sri Lanka
+            {tripInfo ? (
+              <>
+                {tripInfo.startDate} to {tripInfo.endDate} • {tripInfo.travelers} {tripInfo.travelers === 1 ? 'Traveler' : 'Travelers'}
+                {tripInfo.districts?.length > 0 && ` • ${tripInfo.districts.join(', ')}`}
+              </>
+            ) : (
+              'Select places to visit and plan your route through Sri Lanka'
+            )}
           </p>
         </div>
 
@@ -197,7 +328,7 @@ export default function PathCreationPage() {
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Map View</h3>
-              <MapComponent
+              <FreeMapComponent
                 places={selectedPlaces}
                 center={mapCenter}
                 onPlaceSelect={handleAddToPath}

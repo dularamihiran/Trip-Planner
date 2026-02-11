@@ -353,28 +353,43 @@ Trip Planner App - Sri Lanka Travel Guide
   return content;
 };
 
-// API call helper (with fallback to mock data)
+// API call helper - fetch trips from MongoDB backend
 export const fetchUserTrips = async (): Promise<Trip[]> => {
   try {
-    // TODO: Replace with actual API call
-    // const response = await fetch('/api/trips', {
-    //   headers: {
-    //     'Authorization': `Bearer ${getAuthToken()}`,
-    //   },
-    // });
-    
-    // if (!response.ok) {
-    //   throw new Error('Failed to fetch trips');
-    // }
-    
-    // return await response.json();
+    // Get user from localStorage
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+      console.log('No user found in localStorage');
+      return [];
+    }
 
-    // For now, return mock data after a small delay to simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockTrips;
+    const user = JSON.parse(userStr);
+    const userId = user.userId;
+
+    if (!userId) {
+      console.log('No userId found');
+      return [];
+    }
+
+    // Fetch trips from backend
+    const response = await fetch(`http://localhost:5000/api/trips/user/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch trips');
+    }
+    
+    const data = await response.json();
+    console.log('Trips fetched from backend:', data);
+    
+    // Backend returns { trips: [...] }
+    return data.trips || [];
   } catch (error) {
     console.error('Error fetching trips:', error);
-    // Fallback to mock data
-    return mockTrips;
+    return [];
   }
 };

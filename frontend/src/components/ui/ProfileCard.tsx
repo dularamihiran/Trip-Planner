@@ -58,7 +58,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ userProfile, onProfileUpdate 
               <h1 className="text-2xl font-bold">{currentUser.fullName}</h1>
               <p className="text-emerald-100 text-sm">{currentUser.email}</p>
               <p className="text-emerald-100 text-xs mt-1">
-                Member since {formatDate(currentUser.joinedDate)}
+                Member since {formatDate(currentUser.createdAt)}
               </p>
             </div>
           )}
@@ -114,12 +114,12 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ userProfile, onProfileUpdate 
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">Phone Number</label>
-                    <p className="text-gray-900">{currentUser.phoneNumber}</p>
+                    <p className="text-gray-900">{currentUser.phoneNumber || 'Not provided'}</p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">Country</label>
-                    <p className="text-gray-900">{currentUser.country}</p>
+                    <p className="text-gray-900">{currentUser.country || 'Not provided'}</p>
                   </div>
                 </div>
 
@@ -165,8 +165,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ userProfile, onProfileUpdate 
             {/* Activity Info */}
             <div className="border-t border-gray-200 pt-6">
               <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Last active: {formatDate(currentUser.lastActive)}</span>
-                <span>Joined: {formatDate(currentUser.joinedDate)}</span>
+                <span>Last active: {currentUser.lastActive ? formatDate(currentUser.lastActive) : 'Recently'}</span>
+                <span>Joined: {formatDate(currentUser.createdAt)}</span>
               </div>
             </div>
           </div>

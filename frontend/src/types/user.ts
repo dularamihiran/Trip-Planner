@@ -1,13 +1,17 @@
+export type UserRole = 'USER' | 'HOTEL_OWNER' | 'ADMIN';
+
 export interface User {
   userId: string;
   fullName: string;
   email: string;
-  phoneNumber: string;
-  country: string;
-  bio: string;
+  phoneNumber?: string;
+  country?: string;
+  address?: string;
+  bio?: string;
   profilePicture?: string;
-  joinedDate: string;
-  lastActive: string;
+  role: UserRole;
+  createdAt: string;
+  lastActive?: string;
 }
 
 export interface UserProfile {

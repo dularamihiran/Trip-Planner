@@ -218,7 +218,7 @@ export default function SearchBar({ onPlaceFound }: SearchBarProps) {
             <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="text-sm text-gray-600">No places found for "{searchQuery}"</p>
+          <p className="text-sm text-gray-600">No places found for &ldquo;{searchQuery}&rdquo;</p>
             <p className="text-xs text-gray-500 mt-1">Try searching for beaches, temples, or national parks</p>
           </div>
         )}
@@ -227,7 +227,7 @@ export default function SearchBar({ onPlaceFound }: SearchBarProps) {
       {/* Search Tips */}
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-700">
-          💡 <strong>Search Tips:</strong> Try searching for specific attractions like "Sigiriya", categories like "beach" or "temple", or locations like "Kandy" or "Galle"
+          💡 <strong>Search Tips:</strong> Try searching for specific attractions like &ldquo;Sigiriya&rdquo;, categories like &ldquo;beach&rdquo; or &ldquo;temple&rdquo;, or locations like &ldquo;Kandy&rdquo; or &ldquo;Galle&rdquo;
         </p>
       </div>
 

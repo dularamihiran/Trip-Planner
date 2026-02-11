@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { userApi } from '@/utils/api';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -16,6 +19,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -41,16 +45,39 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
+    setError('');
     
-    // TODO: Implement actual registration logic with AWS Cognito
-    console.log('Registration attempt:', formData);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Map userType to role expected by backend
+      const role = formData.userType === 'hotel_owner' ? 'HOTEL_OWNER' : 'USER';
+      const fullName = `${formData.firstName} ${formData.lastName}`;
+      
+      const response = await userApi.register(
+        formData.email,
+        formData.password,
+        fullName,
+        role
+      );
+
+      console.log('Registration successful:', response);
+
+      // Save user data and token to localStorage
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('userId', response.user.userId);
+
+      // Redirect based on role
+      if (response.user.role === 'HOTEL_OWNER') {
+        router.push('/hotels');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
       setIsLoading(false);
-      // For now, just show success - later integrate with Cognito
-      alert('Registration functionality will be implemented with AWS Cognito');
-    }, 2000);
+    }
   };
 
   return (
@@ -78,6 +105,13 @@ export default function RegisterPage() {
         {/* Registration Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
             {/* User Type Selection */}
             <div>
               <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">

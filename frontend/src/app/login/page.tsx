@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { userApi } from '@/utils/api';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -10,32 +11,47 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError(''); // Clear error on input change
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // TODO: Implement actual login logic with AWS Cognito
-    console.log('Login attempt:', formData);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // For now, redirect to dashboard on successful login
-      // Later this will be conditional based on actual authentication
-      if (formData.email && formData.password) {
-        window.location.href = '/dashboard';
+    try {
+      const response = await userApi.login(formData.email, formData.password);
+      
+      if (response.user && response.token) {
+        // Save user data and token to localStorage
+        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('userId', response.user.userId);
+        
+        // Redirect based on user role
+        if (response.user.role === 'ADMIN') {
+          window.location.href = '/admin';
+        } else if (response.user.role === 'HOTEL_OWNER') {
+          window.location.href = '/hotel-dashboard'; // Hotel owners manage their hotels
+        } else {
+          window.location.href = '/dashboard'; // Regular users plan trips
+        }
       } else {
-        alert('Please fill in all fields');
+        setError(response.error || 'Login failed. Please check your credentials.');
       }
-    }, 2000);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('Failed to connect to server. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -63,6 +79,18 @@ export default function LoginPage() {
         {/* Login Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+            
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">

@@ -10,7 +10,6 @@ import BookingList from '@/components/ui/BookingList';
 import MapPanel from '@/components/ui/MapPanel';
 import UpdateBookingModal from '@/components/ui/UpdateBookingModal';
 import { Trip, Booking } from '@/types/trip';
-import { mockTrips } from '@/utils/tripHelpers';
 import { downloadItinerary, printTripItinerary } from '@/utils/pdfGenerator';
 
 export default function TripDetailsPage() {
@@ -29,28 +28,23 @@ export default function TripDetailsPage() {
         setLoading(true);
         setError(null);
         
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/trips/${tripId}`, {
-        //   headers: {
-        //     'Authorization': `Bearer ${getAuthToken()}`,
-        //   },
-        // });
-        // 
-        // if (!response.ok) {
-        //   throw new Error('Failed to fetch trip details');
-        // }
-        // 
-        // const tripData = await response.json();
+        // Fetch from backend API
+        const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         
-        // For now, use mock data with a delay to simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const foundTrip = mockTrips.find(t => t.tripId === tripId);
-        
-        if (!foundTrip) {
-          throw new Error('Trip not found');
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Trip not found');
+          }
+          throw new Error('Failed to fetch trip details');
         }
         
-        setTrip(foundTrip);
+        const tripData = await response.json();
+        setTrip(tripData);
       } catch (err) {
         console.error('Error fetching trip details:', err);
         setError(err instanceof Error ? err.message : 'Failed to load trip details');
@@ -136,14 +130,14 @@ export default function TripDetailsPage() {
     } catch (error) {
       console.error('Error removing place:', error);
       // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, places: trip.places } : null);
+      setTrip(prev => prev ? { ...prev, places: trip.places || [] } : null);
     }
   };
 
   // Handle updating booking
   const handleUpdateBooking = (bookingId: string) => {
     if (!trip) return;
-    const booking = trip.bookings.find(b => b.bookingId === bookingId);
+    const booking = (trip.bookings || []).find(b => b.bookingId === bookingId);
     if (booking) {
       setSelectedBooking(booking);
       setIsUpdateModalOpen(true);
@@ -156,7 +150,7 @@ export default function TripDetailsPage() {
 
     try {
       // Optimistic update
-      const updatedBookings = trip.bookings.map(booking => 
+      const updatedBookings = (trip.bookings || []).map(booking => 
         booking.bookingId === bookingId 
           ? { ...booking, ...updates }
           : booking
@@ -179,7 +173,7 @@ export default function TripDetailsPage() {
     } catch (error) {
       console.error('Error updating booking:', error);
       // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, bookings: trip.bookings } : null);
+      setTrip(prev => prev ? { ...prev, bookings: trip.bookings || [] } : null);
     }
   };
 
@@ -209,7 +203,7 @@ export default function TripDetailsPage() {
 
     try {
       // Optimistic update
-      const updatedBookings = trip.bookings.map(booking => 
+      const updatedBookings = (trip.bookings || []).map(booking => 
         booking.bookingId === bookingId 
           ? { ...booking, status: 'CANCELLED' as const }
           : booking
@@ -228,7 +222,7 @@ export default function TripDetailsPage() {
     } catch (error) {
       console.error('Error canceling booking:', error);
       // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, bookings: trip.bookings } : null);
+      setTrip(prev => prev ? { ...prev, bookings: trip.bookings || [] } : null);
     }
   };
 
@@ -328,7 +322,7 @@ export default function TripDetailsPage() {
 
             {/* Places in Itinerary */}
             <TripPlaceList
-              places={trip.places}
+              places={trip.places || []}
               tripStatus={trip.status}
               onMarkDone={handleMarkPlaceDone}
               onRemovePlace={handleRemovePlace}
@@ -336,7 +330,7 @@ export default function TripDetailsPage() {
 
             {/* Hotel Bookings */}
             <BookingList
-              bookings={trip.bookings}
+              bookings={trip.bookings || []}
               onUpdateBooking={handleUpdateBooking}
               onCancelBooking={handleCancelBooking}
             />

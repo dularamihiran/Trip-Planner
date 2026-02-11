@@ -30,7 +30,7 @@ export default function BookingModal({ hotel, onConfirm, onClose }: BookingModal
   // Calculate total price
   const calculateTotal = () => {
     const nights = calculateNights();
-    return nights * hotel.pricePerNight;
+    return nights * (hotel.pricePerNight || 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +56,7 @@ export default function BookingModal({ hotel, onConfirm, onClose }: BookingModal
     // Simulate API call delay
     setTimeout(() => {
       const booking: Omit<Booking, 'id' | 'bookingDate'> = {
-        hotelId: hotel.id,
+        hotelId: hotel.id || '',
         hotelName: hotel.name,
         district: hotel.district,
         checkIn: bookingData.checkIn,
@@ -121,7 +121,7 @@ export default function BookingModal({ hotel, onConfirm, onClose }: BookingModal
                 <svg
                   key={index}
                   className={`w-4 h-4 ${
-                    index < hotel.rating ? 'text-yellow-400' : 'text-gray-300'
+                    index < (hotel.rating || 0) ? 'text-yellow-400' : 'text-gray-300'
                   }`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
@@ -133,7 +133,7 @@ export default function BookingModal({ hotel, onConfirm, onClose }: BookingModal
             <span className="text-sm text-gray-600">({hotel.rating} stars)</span>
           </div>
           <div className="mt-2 text-lg font-semibold text-emerald-600">
-            {formatPrice(hotel.pricePerNight)} / night
+            {formatPrice(hotel.pricePerNight || 0)} / night
           </div>
         </div>
 
@@ -203,7 +203,7 @@ export default function BookingModal({ hotel, onConfirm, onClose }: BookingModal
                 </div>
                 <div className="flex justify-between">
                   <span>Rate per night:</span>
-                  <span>{formatPrice(hotel.pricePerNight)}</span>
+                  <span>{formatPrice(hotel.pricePerNight || 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Guests:</span>

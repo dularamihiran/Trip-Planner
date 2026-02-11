@@ -1,4 +1,4 @@
-// File: E:\Trip-planning-web\trip-planner\frontend\src\app\trip\page.tsx
+// File: E:\Trip-planning-web\trip-planner\New-folder\frontend\src\app\trip\page.tsx
 import * as entry from '../../../../src/app/trip/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

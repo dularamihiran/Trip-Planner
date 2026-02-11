@@ -17,8 +17,9 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName }) => {
     
     // For demo purposes, create a placeholder map URL
     // In real implementation, use Google Maps Static API or embed
-    const center = places.length > 0 
-      ? `${places[0].lat},${places[0].lng}`
+    const firstPlaceWithCoords = places.find(p => p.lat != null && p.lng != null);
+    const center = firstPlaceWithCoords
+      ? `${firstPlaceWithCoords.lat},${firstPlaceWithCoords.lng}`
       : '7.8731,80.7718'; // Center of Sri Lanka
     
     return `https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Google+Maps+View+%5B${places.length}+places%5D`;

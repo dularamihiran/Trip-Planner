@@ -1,39 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import ProfileCard from '@/components/ui/ProfileCard';
 import { User, UserProfile } from '@/types/user';
-import { mockUserProfile } from '@/utils/mockUser';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Load user profile on component mount
   useEffect(() => {
-    const loadUserProfile = async () => {
+    const loadUserProfile = () => {
       try {
         setLoading(true);
         
-        // TODO: Replace with actual API call
-        // const response = await fetch('/api/user/profile', {
-        //   headers: {
-        //     'Authorization': `Bearer ${getAuthToken()}`,
-        //   },
-        // });
-        // 
-        // if (!response.ok) {
-        //   throw new Error('Failed to fetch user profile');
-        // }
-        // 
-        // const profileData = await response.json();
+        // Get user from localStorage
+        const userStr = localStorage.getItem('user');
         
-        // For now, use mock data with a delay to simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setUserProfile(mockUserProfile);
+        if (!userStr) {
+          // Not logged in, redirect to login
+          router.push('/login');
+          return;
+        }
+        
+        const user = JSON.parse(userStr);
+        
+        // Create user profile from stored data
+        const profile: UserProfile = {
+          user: {
+            userId: user.userId || user.id,
+            email: user.email,
+            fullName: user.name || user.fullName || 'User',
+            role: user.role || 'USER',
+            phoneNumber: user.phone || user.phoneNumber,
+            country: user.country,
+            address: user.address,
+            createdAt: user.createdAt || new Date().toISOString()
+          },
+          stats: {
+            totalTrips: user.totalTrips || 0,
+            placesVisited: user.placesVisited || 0,
+            favoriteDestination: user.favoriteDistrict || user.favoriteDestination || 'Colombo',
+            completedTrips: user.completedTrips || 0
+          }
+        };
+        
+        setUserProfile(profile);
         setError(null);
       } catch (err) {
         setError('Failed to load profile. Please try again.');
@@ -44,33 +61,26 @@ export default function ProfilePage() {
     };
 
     loadUserProfile();
-  }, []);
+  }, [router]);
 
   // Handle profile updates
-  const handleProfileUpdate = async (updatedUser: User) => {
+  const handleProfileUpdate = (updatedUser: User) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/user/profile', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      //   body: JSON.stringify(updatedUser),
-      // });
-      // 
-      // if (!response.ok) {
-      //   throw new Error('Failed to update profile');
-      // }
-
-      // For now, just update local state
-      setUserProfile(prev => prev ? { ...prev, user: updatedUser } : null);
-      console.log('Profile updated:', updatedUser);
+      // Update localStorage
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const newUser = { ...currentUser, ...updatedUser };
+      localStorage.setItem('user', JSON.stringify(newUser));
       
-      // You could add a success toast notification here
+      // Update local state
+      setUserProfile(prev => prev ? { ...prev, user: updatedUser } : null);
+      
+      // TODO: Also update in backend
+      // await userApi.updateProfile(updatedUser);
+      
+      alert('✅ Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      // You could add an error toast notification here
+      alert('❌ Failed to update profile');
     }
   };
 
@@ -154,7 +164,7 @@ export default function ProfilePage() {
         {!loading && !error && userProfile && (
           <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Actions</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 href="/dashboard"
                 className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
@@ -164,16 +174,6 @@ export default function ProfilePage() {
                 </svg>
                 View My Trips
               </Link>
-              
-              <button
-                onClick={() => alert('Password change functionality will be implemented with backend')}
-                className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-1.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                Change Password
-              </button>
               
               <button
                 onClick={() => alert('Account settings functionality will be implemented with backend')}

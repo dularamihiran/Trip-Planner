@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { tripApi } from '@/utils/api';
 
 export default function TripPlannerPage() {
   const [tripData, setTripData] = useState({
@@ -13,6 +14,9 @@ export default function TripPlannerPage() {
     budget: '',
     interests: [] as string[]
   });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const interestOptions = [
     'Historical Sites',
@@ -78,17 +82,52 @@ export default function TripPlannerPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement trip creation logic
-    console.log('Trip data:', tripData);
     
-    // For now, redirect to path creation page with trip data
-    if (tripData.name && tripData.startDate && tripData.endDate && tripData.districts.length > 0) {
-      // In a real app, you'd save the trip data and pass it to the path page
-      window.location.href = '/path';
-    } else {
-      alert('Please fill in all required fields: Trip Name, Dates, and at least one District');
+    // Validate required fields
+    if (!tripData.name || !tripData.startDate || !tripData.endDate || tripData.districts.length === 0) {
+      setError('Please fill in all required fields: Trip Name, Dates, and at least one District');
+      return;
+    }
+
+    if (tripData.interests.length === 0) {
+      setError('Please select at least one interest');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Call the suggestion API
+      const response = await tripApi.suggestPlaces({
+        districts: tripData.districts,
+        interests: tripData.interests,
+        budget: tripData.budget,
+        travelers: tripData.travelers,
+        startDate: tripData.startDate,
+        endDate: tripData.endDate,
+      });
+
+      console.log('Suggested places:', response);
+      
+      if (response.places && response.places.length > 0) {
+        // Store trip data and suggestions in localStorage for the path page
+        localStorage.setItem('tripData', JSON.stringify(tripData));
+        localStorage.setItem('suggestedPlaces', JSON.stringify(response.places));
+        localStorage.setItem('suggestionsSummary', JSON.stringify(response.summary));
+        
+        // Navigate to path page
+        window.location.href = '/path';
+      } else {
+        setError('No places found matching your preferences. Try adjusting your filters.');
+      }
+    } catch (err: any) {
+      console.error('Error fetching suggestions:', err);
+      setError('Failed to get suggestions. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -112,6 +151,13 @@ export default function TripPlannerPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
             {/* Trip Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -306,9 +352,20 @@ export default function TripPlannerPage() {
               </Link>
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
+                disabled={isLoading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Trip & Plan Route
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Getting Suggestions...
+                  </div>
+                ) : (
+                  'Create Trip & Plan Route'
+                )}
               </button>
             </div>
           </form>
@@ -316,19 +373,19 @@ export default function TripPlannerPage() {
 
         {/* Feature Preview */}
         <div className="mt-8 bg-gradient-to-r from-blue-50 to-emerald-50 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Coming Soon:</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">How it works:</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-              <span>Smart itinerary suggestions</span>
+              <span>Select your preferences</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Route optimization</span>
+              <span>Get smart suggestions</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Hotel recommendations</span>
+              <span>Build your itinerary</span>
             </div>
           </div>
         </div>

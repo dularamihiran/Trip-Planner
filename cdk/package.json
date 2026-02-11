@@ -1,0 +1,32 @@
+{
+  "name": "trip-planner-cdk",
+  "version": "1.0.0",
+  "description": "AWS CDK infrastructure for Smart Trip Planner",
+  "bin": {
+    "cdk": "bin/cdk.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "deploy": "cdk deploy",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "destroy": "cdk destroy"
+  },
+  "keywords": ["cdk", "aws", "infrastructure", "trip-planner"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "aws-cdk": "^2.114.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.114.1",
+    "constructs": "^10.3.0",
+    "@aws-cdk/aws-lambda-nodejs": "^1.204.0",
+    "esbuild": "^0.19.8"
+  }
+}

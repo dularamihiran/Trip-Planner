@@ -168,33 +168,35 @@ const TripHeader: React.FC<TripHeaderProps> = ({ trip, onStatusChange, onDownloa
           <div className="text-xs text-gray-600">Days</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-blue-600">{trip.places.length}</div>
+          <div className="text-xl font-bold text-blue-600">{trip.places?.length || 0}</div>
           <div className="text-xs text-gray-600">Places</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-purple-600">{trip.districts.length}</div>
+          <div className="text-xl font-bold text-purple-600">{trip.districts?.length || 0}</div>
           <div className="text-xs text-gray-600">Districts</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-orange-600">{trip.bookings.length}</div>
+          <div className="text-xl font-bold text-orange-600">{trip.bookings?.length || 0}</div>
           <div className="text-xs text-gray-600">Hotels</div>
         </div>
       </div>
 
       {/* Districts */}
-      <div className="mt-4">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Districts Covered</h3>
-        <div className="flex flex-wrap gap-2">
-          {trip.districts.map((district) => (
-            <span
-              key={district}
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
-            >
-              {district}
-            </span>
-          ))}
+      {trip.districts && trip.districts.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Districts Covered</h3>
+          <div className="flex flex-wrap gap-2">
+            {trip.districts.map((district) => (
+              <span
+                key={district}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"
+              >
+                {district}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
