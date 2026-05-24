@@ -11,41 +11,41 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/path/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/path/page.css",
-      "static/chunks/app/path/page.js"
-    ],
     "/hotels/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/hotels/page.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/login/page.js"
     ],
     "/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/trips/[tripId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/trips/[tripId]/page.js"
-    ],
     "/trip/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/trip/page.js"
     ],
-    "/profile/page": [
+    "/register/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
+      "static/chunks/app/register/page.js"
     ],
-    "/login/page": [
+    "/path/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/login/page.js"
+      "static/css/app/path/page.css",
+      "static/chunks/app/path/page.js"
+    ],
+    "/trips/[tripId]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/trips/[tripId]/page.js"
     ],
     "/hotel-dashboard/page": [
       "static/chunks/webpack.js",
@@ -57,10 +57,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/hotel-dashboard/add-hotel/page.js"
     ],
-    "/_not-found/page": [
+    "/admin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/admin/page.js"
     ]
   }
 }

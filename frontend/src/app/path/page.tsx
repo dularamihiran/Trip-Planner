@@ -114,9 +114,10 @@ export default function PathCreationPage() {
         
         setSuggestedPlaces(transformedPlaces);
         
-        // Set map center to first place
-        if (transformedPlaces.length > 0) {
-          setMapCenter({ lat: transformedPlaces[0].lat, lng: transformedPlaces[0].lng });
+        // Set map center to first place with valid coordinates
+        const firstValidPlace = transformedPlaces.find(p => p.lat != null && p.lng != null);
+        if (firstValidPlace) {
+          setMapCenter({ lat: firstValidPlace.lat, lng: firstValidPlace.lng });
         }
       } catch (error) {
         console.error('Error loading suggestions:', error);

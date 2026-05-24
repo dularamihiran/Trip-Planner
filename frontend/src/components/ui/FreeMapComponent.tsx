@@ -154,18 +154,24 @@ export default function FreeMapComponent({ places, center, onPlaceSelect }: Free
     );
   }
 
-  const getMapCenter = () => {
+  const getMapCenter = (): [number, number] => {
     const validPlaces = places.filter(p => p.lat != null && p.lng != null);
     if (validPlaces.length > 0) {
       return [validPlaces[0].lat, validPlaces[0].lng];
     }
-    return [center.lat, center.lng];
+    // Ensure center values are valid numbers
+    if (center && center.lat != null && center.lng != null && 
+        typeof center.lat === 'number' && typeof center.lng === 'number') {
+      return [center.lat, center.lng];
+    }
+    // Default fallback to Sri Lanka center
+    return [7.8731, 80.7718];
   };
 
   return (
     <div className="relative">
       <MapContainer
-        center={getMapCenter() as [number, number]}
+        center={getMapCenter()}
         zoom={places.filter(p => p.lat != null && p.lng != null).length === 0 ? 8 : 10}
         style={{ height: '500px', width: '100%', borderRadius: '0.5rem' }}
         className="z-0"
