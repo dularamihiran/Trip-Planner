@@ -11,8 +11,9 @@ export default function TripPlannerPage() {
     endDate: '',
     travelers: 1,
     districts: [] as string[],
-    budget: '',
-    interests: [] as string[]
+    budget: '100000-200000',
+    interests: [] as string[],
+    startPoint: ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -86,8 +87,8 @@ export default function TripPlannerPage() {
     e.preventDefault();
     
     // Validate required fields
-    if (!tripData.name || !tripData.startDate || !tripData.endDate || tripData.districts.length === 0) {
-      setError('Please fill in all required fields: Trip Name, Dates, and at least one District');
+    if (!tripData.name || !tripData.startDate || !tripData.endDate || tripData.districts.length === 0 || !tripData.startPoint) {
+      setError('Please fill in all required fields: Trip Name, Starting Location, Dates, and at least one District');
       return;
     }
 
@@ -176,19 +177,18 @@ export default function TripPlannerPage() {
               </div>
 
               <div>
-                <label htmlFor="travelers" className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Travelers
+                <label htmlFor="startPoint" className="block text-sm font-medium text-gray-700 mb-2">
+                  Trip Starting Location
                 </label>
-                <select
-                  id="travelers"
-                  value={tripData.travelers}
-                  onChange={(e) => setTripData(prev => ({ ...prev, travelers: parseInt(e.target.value) }))}
+                <input
+                  type="text"
+                  id="startPoint"
+                  value={tripData.startPoint}
+                  onChange={(e) => setTripData(prev => ({ ...prev, startPoint: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                    <option key={num} value={num}>{num} {num === 1 ? 'Person' : 'People'}</option>
-                  ))}
-                </select>
+                  placeholder="e.g., Bandaranaike International Airport (CMB) or Colombo Fort"
+                  required
+                />
               </div>
 
               <div>
@@ -298,26 +298,7 @@ export default function TripPlannerPage() {
               </div>
             </div>
 
-            {/* Budget */}
-            <div>
-              <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
-                Budget (LKR)
-              </label>
-              <select
-                id="budget"
-                value={tripData.budget}
-                onChange={(e) => setTripData(prev => ({ ...prev, budget: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value="">Select your budget range</option>
-                <option value="50000-100000">Rs. 50,000 - Rs. 100,000</option>
-                <option value="100000-200000">Rs. 100,000 - Rs. 200,000</option>
-                <option value="200000-400000">Rs. 200,000 - Rs. 400,000</option>
-                <option value="400000-600000">Rs. 400,000 - Rs. 600,000</option>
-                <option value="600000-1000000">Rs. 600,000 - Rs. 1,000,000</option>
-                <option value="1000000+">Rs. 1,000,000+</option>
-              </select>
-            </div>
+
 
             {/* Interests */}
             <div>

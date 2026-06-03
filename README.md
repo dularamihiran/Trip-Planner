@@ -1,15 +1,13 @@
 # Trip Planning Web Application for Sri Lanka
 
-A comprehensive trip planning platform that allows tourists to plan customized trips by selecting districts, categories (beaches, hiking, ancient sites), and number of days. The system suggests tourist places, enables users to manage favorite places, generates optimized routes on maps, and provides hotel booking and transport options.
+A comprehensive trip planning platform that allows tourists to plan customized trips by selecting districts, categories (beaches, hiking, ancient sites), and number of days. The system suggests tourist places, enables users to manage favorite places, and generates optimized routes on maps.
 
 ## 🌟 Features
 
 - **District & Category Search**: Find attractions by district and category (beaches, hiking, ancient sites)
 - **Trip Planning**: Add/remove favorite places to build personalized trip itineraries
 - **Route Optimization**: Generate optimized paths using Google Maps API
-- **Hotel Booking**: Hotels can register through the platform, users can book accommodations
-- **Authentication**: Secure signup/login with AWS Cognito (tourists, hotel owners, admin)
-- **Media Storage**: Hotel & place images stored in AWS S3
+- **Authentication**: Secure signup/login for users and admins
 - **Responsive Design**: Modern UI that works on desktop and mobile devices
 
 ## 🛠️ Tech Stack
@@ -23,20 +21,10 @@ A comprehensive trip planning platform that allows tourists to plan customized t
 ### Backend
 - **Node.js** with **TypeScript**
 - **Express.js** for API framework
-- **AWS SDK** for cloud services integration
+- **MongoDB Atlas** for data storage
 
-### Database & Storage
-- **AWS DynamoDB** (NoSQL database)
-- **AWS S3** (image storage)
-
-### Authentication & Security
-- **AWS Cognito** for user authentication
-
-### Infrastructure & Deployment
-- **AWS CDK** for infrastructure as code
-- **AWS Lambda** for serverless functions
-- **API Gateway** for API management
-- **Vercel/AWS Amplify** for frontend deployment
+### Database
+- **MongoDB Atlas** (NoSQL database)
 
 ## 📁 Project Structure
 
@@ -65,8 +53,6 @@ trip-planner/
 
 ### Prerequisites
 - Node.js 18+ and npm
-- AWS CLI configured
-- AWS CDK CLI installed
 
 ### Frontend Development
 

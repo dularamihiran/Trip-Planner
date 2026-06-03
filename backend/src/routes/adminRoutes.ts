@@ -14,7 +14,18 @@ router.get('/', async (req: Request, res: Response) => {
       .find({}, { projection: { password: 0 } })
       .toArray();
     
-    res.json({ success: true, data: users });
+    // Add real trip counts from database for each user
+    const usersWithTripCounts = await Promise.all(
+      users.map(async (user) => {
+        const tripsCount = await db.collection('trips').countDocuments({ userId: user.userId });
+        return {
+          ...user,
+          tripsCount
+        };
+      })
+    );
+    
+    res.json({ success: true, data: usersWithTripCounts });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -28,15 +39,12 @@ router.get('/stats', async (req: Request, res: Response) => {
     const totalUsers = await db.collection('users').countDocuments();
     const activeUsers = await db.collection('users').countDocuments({ isActive: true });
     const totalTrips = await db.collection('trips').countDocuments();
-    const totalBookings = await db.collection('bookings').countDocuments();
-    
     res.json({
       success: true,
       data: {
         totalUsers,
         activeUsers,
-        totalTrips,
-        totalBookings
+        totalTrips
       }
     });
   } catch (error: any) {

@@ -6,10 +6,9 @@ import { initializeMongoDB } from './config/mongodb';
 
 // Import routes
 import userRoutes from './routes/userRoutes';
-import hotelRoutes from './routes/hotelRoutes';
 import tripRoutes from './routes/tripRoutes';
-import uploadRoutes from './routes/uploadRoutes';
 import adminRoutes from './routes/adminRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +42,16 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Root route welcome message
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    message: 'Welcome to the Smart Trip Planner API',
+    status: 'Running',
+    healthCheck: `http://localhost:${PORT}/health`,
+    version: '1.0.0'
+  });
+});
+
 // Health check route
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
@@ -56,10 +65,9 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/users', userRoutes);
-app.use('/api/hotels', hotelRoutes);
 app.use('/api/trips', tripRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

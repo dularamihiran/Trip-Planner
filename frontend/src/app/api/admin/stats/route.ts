@@ -7,13 +7,11 @@ export async function GET() {
   try {
     const usersCollection = await getCollection(Collections.USERS);
     const tripsCollection = await getCollection(Collections.TRIPS);
-    const bookingsCollection = await getCollection(Collections.BOOKINGS);
     
     // Get statistics
     const totalUsers = await usersCollection.countDocuments();
     const activeUsers = await usersCollection.countDocuments({ isActive: true });
     const totalTrips = await tripsCollection.countDocuments();
-    const totalBookings = await bookingsCollection.countDocuments();
     
     // Get all users with additional info
     const users = await usersCollection.find({}).toArray();
@@ -24,8 +22,7 @@ export async function GET() {
         stats: {
           totalUsers,
           activeUsers,
-          totalTrips,
-          totalBookings
+          totalTrips
         },
         users: users.map(user => ({
           userId: user.userId,

@@ -1,4 +1,4 @@
-import { Trip, Place, Booking } from '@/types/trip';
+import { Trip, Place } from '@/types/trip';
 
 // Mock data for demonstration
 export const mockTrips: Trip[] = [
@@ -40,26 +40,6 @@ export const mockTrips: Trip[] = [
         category: 'Religious',
         lat: 7.8567,
         lng: 80.6493
-      }
-    ],
-    bookings: [
-      {
-        bookingId: 'booking-001',
-        hotelName: 'Cinnamon Citadel Kandy',
-        district: 'Kandy',
-        checkIn: '2025-09-15',
-        checkOut: '2025-09-18',
-        status: 'CONFIRMED',
-        price: 45000
-      },
-      {
-        bookingId: 'booking-002',
-        hotelName: 'Heritage Anuradhapura',
-        district: 'Anuradhapura',
-        checkIn: '2025-09-18',
-        checkOut: '2025-09-22',
-        status: 'CONFIRMED',
-        price: 38000
       }
     ],
     status: 'PLANNED'
@@ -112,26 +92,6 @@ export const mockTrips: Trip[] = [
         lng: 81.3336
       }
     ],
-    bookings: [
-      {
-        bookingId: 'booking-003',
-        hotelName: 'Fortress Resort & Spa',
-        district: 'Galle',
-        checkIn: '2025-10-01',
-        checkOut: '2025-10-04',
-        status: 'CONFIRMED',
-        price: 65000
-      },
-      {
-        bookingId: 'booking-004',
-        hotelName: 'Yala Village Hotel',
-        district: 'Hambantota',
-        checkIn: '2025-10-04',
-        checkOut: '2025-10-08',
-        status: 'CONFIRMED',
-        price: 42000
-      }
-    ],
     status: 'IN_PROGRESS'
   },
   {
@@ -166,26 +126,6 @@ export const mockTrips: Trip[] = [
         lng: 80.7891
       }
     ],
-    bookings: [
-      {
-        bookingId: 'booking-005',
-        hotelName: 'Grand Hotel Nuwara Eliya',
-        district: 'Nuwara Eliya',
-        checkIn: '2025-08-10',
-        checkOut: '2025-08-14',
-        status: 'CONFIRMED',
-        price: 35000
-      },
-      {
-        bookingId: 'booking-006',
-        hotelName: 'Ella Mount Heaven Hotel',
-        district: 'Badulla',
-        checkIn: '2025-08-14',
-        checkOut: '2025-08-17',
-        status: 'CONFIRMED',
-        price: 28000
-      }
-    ],
     status: 'COMPLETED'
   },
   {
@@ -210,17 +150,6 @@ export const mockTrips: Trip[] = [
         category: 'Cultural',
         lat: 6.9108,
         lng: 79.8608
-      }
-    ],
-    bookings: [
-      {
-        bookingId: 'booking-007',
-        hotelName: 'Cinnamon Grand Colombo',
-        district: 'Colombo',
-        checkIn: '2025-11-05',
-        checkOut: '2025-11-07',
-        status: 'CONFIRMED',
-        price: 55000
       }
     ],
     status: 'PLANNED'
@@ -249,7 +178,6 @@ export const mockTrips: Trip[] = [
         lng: 80.0306
       }
     ],
-    bookings: [],
     status: 'PLANNED'
   }
 ];
@@ -318,31 +246,6 @@ ${index + 1}. ${place.name}
    Location: ${place.lat}, ${place.lng}
 `;
   });
-
-  if (trip.bookings.length > 0) {
-    content += `
-
-HOTEL BOOKINGS (${trip.bookings.length})
-==============
-`;
-
-    trip.bookings.forEach((booking, index) => {
-      content += `
-${index + 1}. ${booking.hotelName}
-   District: ${booking.district}
-   Check-in: ${formatDate(booking.checkIn)}
-   Check-out: ${formatDate(booking.checkOut)}
-   Status: ${booking.status}
-   Price: LKR ${booking.price.toLocaleString()}
-`;
-    });
-
-    const totalCost = trip.bookings.reduce((sum, booking) => sum + booking.price, 0);
-    content += `
-
-TOTAL ACCOMMODATION COST: LKR ${totalCost.toLocaleString()}
-`;
-  }
 
   content += `
 

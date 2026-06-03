@@ -2,7 +2,7 @@
  * Authentication utility functions
  */
 
-export type UserRole = 'USER' | 'HOTEL_OWNER' | 'ADMIN';
+export type UserRole = 'USER' | 'ADMIN';
 
 export interface AuthUser {
   userId: string;
@@ -65,13 +65,6 @@ export const hasRole = (role: UserRole): boolean => {
  */
 export const isAdmin = (): boolean => {
   return hasRole('ADMIN');
-};
-
-/**
- * Check if user is hotel owner
- */
-export const isHotelOwner = (): boolean => {
-  return hasRole('HOTEL_OWNER');
 };
 
 /**

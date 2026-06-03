@@ -6,8 +6,10 @@ import { useState } from 'react';
 interface TripPlaceListProps {
   places: Place[];
   tripStatus: Trip['status'];
+  tripId: string;
   onMarkDone: (placeId: string) => void;
   onRemovePlace: (placeId: string) => void;
+  onStatusChange: (placeId: string, status: 'PLANNED' | 'DONE') => void;
 }
 
 type VisitStatus = 'DONE' | 'NEXT' | 'UPCOMING';
@@ -15,15 +17,16 @@ type VisitStatus = 'DONE' | 'NEXT' | 'UPCOMING';
 const TripPlaceList: React.FC<TripPlaceListProps> = ({ 
   places, 
   tripStatus, 
+  tripId,
   onMarkDone, 
-  onRemovePlace 
+  onRemovePlace,
+  onStatusChange
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({});
 
   // Get visit status based on actual data
   const getPlaceStatus = (place: Place, index: number): VisitStatus => {
-    // If place is marked as done, return DONE
     if (place.visitStatus === 'DONE') return 'DONE';
     
     // If trip is completed, all places are done
@@ -32,7 +35,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
     // If trip is planned, all places are upcoming
     if (tripStatus === 'PLANNED') return 'UPCOMING';
     
-    // For IN_PROGRESS trips, find the first non-done place and mark it as NEXT
+    // For IN_PROGRESS or PLANNING trips, find the first non-done place and mark it as NEXT
     const firstNonDoneIndex = places.findIndex(p => p.visitStatus !== 'DONE');
     if (index === firstNonDoneIndex) return 'NEXT';
     
@@ -42,43 +45,31 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
   const getStatusBadge = (status: VisitStatus) => {
     switch (status) {
       case 'DONE':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'NEXT':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'UPCOMING':
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+        return 'bg-gray-100 text-gray-600 border-gray-250';
     }
   };
 
   const getStatusIcon = (status: VisitStatus) => {
     switch (status) {
       case 'DONE':
-        return (
-          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        );
+        return '✅';
       case 'NEXT':
-        return (
-          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        );
+        return '🚀';
       case 'UPCOMING':
-        return (
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
+        return '📅';
     }
   };
 
-  const handleMarkDone = async (placeId: string) => {
+  const handleStatusChange = async (placeId: string, status: 'PLANNED' | 'DONE') => {
     setLoadingStates(prev => ({ ...prev, [placeId]: true }));
     try {
-      await onMarkDone(placeId);
+      await onStatusChange(placeId, status);
     } catch (error) {
-      console.error('Error marking place as done:', error);
+      console.error('Error changing status:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, [placeId]: false }));
     }
@@ -98,148 +89,207 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
     }
   };
 
+  const getCategoryEmoji = (category: string) => {
+    const icons: { [key: string]: string } = {
+      'Historical Sites': '🏛️',
+      'Religious Sites': '🛕',
+      'Nature': '🌿',
+      'Wildlife': '🦌',
+      'Beaches': '🏖️',
+      'Cultural Experiences': '🎭',
+      'Scenic Views': '🌄',
+      'Hill Country': '⛰️',
+      'Waterfalls': '🌊',
+      'Hiking': '🥾',
+      'Adventure': '⚡'
+    };
+    return icons[category] || '📍';
+  };
+
   // Calculate actual progress based on visit status
   const doneCount = places.filter(place => place.visitStatus === 'DONE').length;
   const totalPlaces = places.length;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-      {/* Accordion Header */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50 transition-colors"
-      >
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-150 mb-6 overflow-hidden">
+      {/* Header Panel */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50 gap-4">
         <div className="flex items-center space-x-3">
-          <h2 className="text-lg font-semibold text-gray-900">Places in Itinerary</h2>
-          <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-            {doneCount}/{totalPlaces} completed
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center space-x-2 text-left focus:outline-none group"
+          >
+            <h2 className="text-xl font-extrabold text-blue-950 group-hover:text-emerald-700 transition-colors">
+              Places in Itinerary
+            </h2>
+            <svg 
+              className={`w-5 h-5 text-gray-500 transform transition-transform group-hover:text-emerald-700 ${isOpen ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <span className="bg-emerald-50 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+            {doneCount}/{totalPlaces} Visited
           </span>
         </div>
-        <svg 
-          className={`w-5 h-5 text-gray-500 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+        
+        <div className="flex items-center">
+          <a
+            href={`/path?tripId=${tripId}`}
+            className="inline-flex items-center px-4 py-2 bg-white hover:bg-emerald-50 text-emerald-700 border border-gray-200 hover:border-emerald-300 text-xs font-bold rounded-lg shadow-sm hover:shadow active:scale-95 transition-all duration-150"
+          >
+            ✏️ Edit & Reorder Places
+          </a>
+        </div>
+      </div>
 
       {/* Accordion Content */}
       {isOpen && (
-        <div className="px-6 pb-6">
+        <div className="p-6">
           {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>Progress</span>
-              <span>{Math.round((doneCount / totalPlaces) * 100)}%</span>
+          <div className="mb-6 bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div className="flex justify-between text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              <span>Trip Progress</span>
+              <span className="text-emerald-700">{Math.round((doneCount / totalPlaces) * 100)}% Complete</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 relative">
+            <div className="w-full bg-gray-200/80 rounded-full h-3 relative overflow-hidden">
               <div 
-                className={`bg-emerald-600 h-2 rounded-full transition-all duration-300 ${
-                  doneCount === 0 ? 'w-0' :
-                  doneCount === totalPlaces ? 'w-full' :
-                  doneCount / totalPlaces <= 0.25 ? 'w-1/4' :
-                  doneCount / totalPlaces <= 0.5 ? 'w-1/2' :
-                  doneCount / totalPlaces <= 0.75 ? 'w-3/4' : 'w-full'
-                }`}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${totalPlaces > 0 ? (doneCount / totalPlaces) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
 
-          {/* Places List */}
+          {/* Places List (Vertical Timeline Style) */}
           {places.length > 0 ? (
-            <div className="space-y-3">
+            <div className="relative border-l-2 border-blue-50/80 ml-5 pl-6 md:pl-8 space-y-6 py-2">
               {places.map((place, index) => {
                 const status = getPlaceStatus(place, index);
                 const isLoading = loadingStates[place.placeId];
                 const isRemoving = loadingStates[`remove-${place.placeId}`];
                 
                 return (
-                  <div
-                    key={place.placeId}
-                    className={`p-4 border rounded-lg transition-all duration-200 ${
-                      status === 'DONE' ? 'bg-green-50 border-green-200' :
-                      status === 'NEXT' ? 'bg-blue-50 border-blue-200' :
-                      'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1">
-                        {/* Order Number */}
-                        <div className="flex-shrink-0 w-8 h-8 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center text-sm font-medium">
-                          {index + 1}
-                        </div>
-                        
-                        {/* Place Info */}
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className={`text-lg font-medium ${status === 'DONE' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                  <div key={place.placeId} className="relative group animate-fadeIn">
+                    {/* Number Dot Anchor */}
+                    <span 
+                      className={`absolute -left-[37px] md:-left-[41px] top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-all duration-200 z-10 ${
+                        status === 'DONE' 
+                          ? 'bg-emerald-500 text-white border-2 border-white' 
+                          : status === 'NEXT'
+                          ? 'bg-blue-600 text-white border-2 border-white animate-pulse'
+                          : 'bg-white border-2 border-blue-200 text-blue-600'
+                      }`}
+                    >
+                      {index + 1}
+                    </span>
+
+                    {/* Card container */}
+                    <div 
+                      className={`border rounded-2xl p-5 transition-all duration-200 ${
+                        status === 'DONE' 
+                          ? 'bg-emerald-50/20 border-emerald-100/60 shadow-sm' 
+                          : status === 'NEXT'
+                          ? 'bg-blue-50/10 border-blue-200 shadow-md ring-1 ring-blue-100'
+                          : 'bg-gray-50/30 border-gray-150 hover:bg-gray-50/50'
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        {/* Info details */}
+                        <div className="flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 
+                              className={`text-lg font-bold transition-all ${
+                                status === 'DONE' 
+                                  ? 'line-through text-gray-400 font-medium' 
+                                  : 'text-gray-900 font-extrabold'
+                              }`}
+                            >
                               {place.name}
                             </h3>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(status)}`}>
-                              {getStatusIcon(status)}
-                              <span className="ml-1">{status}</span>
+                            
+                            <span 
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${getStatusBadge(status)}`}
+                            >
+                              <span className="mr-1">{getStatusIcon(status)}</span>
+                              {status}
                             </span>
                           </div>
-                          
-                          <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-                            <span className="inline-flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              {place.district}
-                            </span>
-                            <span className="bg-gray-200 px-2 py-0.5 rounded text-xs">
+
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500 font-medium">
+                            <span className="inline-flex items-center text-emerald-800">
+                              <span className="mr-1">{getCategoryEmoji(place.category)}</span>
                               {place.category}
                             </span>
-                            {place.lat != null && place.lng != null && (
-                              <span className="text-gray-400">
-                                ({place.lat.toFixed(4)}, {place.lng.toFixed(4)})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex space-x-2 ml-4">
-                        {status !== 'DONE' && tripStatus === 'IN_PROGRESS' && (
-                          <button
-                            onClick={() => handleMarkDone(place.placeId)}
-                            disabled={isLoading}
-                            className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded transition-colors duration-200"
-                          >
-                            {isLoading ? (
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                            ) : (
+                            <span className="text-gray-300">•</span>
+                            <span className="inline-flex items-center text-indigo-900">
+                              📍 {place.district}
+                            </span>
+                            
+                            {((place as any).estimatedCost) && (
                               <>
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                                Done
+                                <span className="text-gray-300">•</span>
+                                <span className="text-emerald-600 font-bold">
+                                  Rs. {((place as any).estimatedCost).toLocaleString()}
+                                </span>
                               </>
                             )}
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => handleRemovePlace(place.placeId, place.name)}
-                          disabled={isRemoving}
-                          className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-sm font-medium rounded transition-colors duration-200"
-                        >
-                          {isRemoving ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                          ) : (
-                            <>
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          </div>
+
+                          {/* Description if present */}
+                          {(place as any).description && (
+                            <p 
+                              className={`text-xs leading-relaxed italic max-w-xl font-normal ${
+                                status === 'DONE' ? 'text-gray-400' : 'text-gray-500'
+                              }`}
+                            >
+                              "{((place as any).description)}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Interactive Status Selector & Options */}
+                        <div className="flex items-center space-x-3 self-end md:self-start">
+                          {/* Beautiful Select Dropdown */}
+                          <div className="relative">
+                            {isLoading ? (
+                              <div className="flex items-center justify-center w-24 py-1.5">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                              </div>
+                            ) : (
+                              <select
+                                value={place.visitStatus || 'PLANNED'}
+                                onChange={(e) => handleStatusChange(place.placeId, e.target.value as 'PLANNED' | 'DONE')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition-colors shadow-sm ${
+                                  place.visitStatus === 'DONE'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                                    : 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
+                                }`}
+                              >
+                                <option value="PLANNED">📅 Planned</option>
+                                <option value="DONE">✅ Completed</option>
+                              </select>
+                            )}
+                          </div>
+
+                          {/* Remove button */}
+                          <button
+                            onClick={() => handleRemovePlace(place.placeId, place.name)}
+                            disabled={isRemoving}
+                            className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-xl disabled:opacity-50 transition-all duration-150"
+                            title="Remove from itinerary"
+                          >
+                            {isRemoving ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
+                            ) : (
+                              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
-                              Remove
-                            </>
-                          )}
-                        </button>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -247,12 +297,15 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <p>No places in your itinerary yet.</p>
+            <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-250">
+              <span className="text-4xl block mb-3">🏝️</span>
+              <p className="text-sm font-semibold text-gray-600 mb-2">No places in your itinerary yet.</p>
+              <a
+                href={`/path?tripId=${tripId}`}
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition-colors"
+              >
+                ➕ Add Attractions Now
+              </a>
             </div>
           )}
         </div>

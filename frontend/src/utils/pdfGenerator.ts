@@ -1,4 +1,4 @@
-import { Trip, Place, Booking } from '@/types/trip';
+import { Trip, Place } from '@/types/trip';
 
 // Dynamic import for jsPDF to avoid SSR issues
 let jsPDF: any = null;
@@ -6,7 +6,6 @@ let jsPDF: any = null;
 // Interface for PDF generation options
 interface PDFGenerationOptions {
   includeMap?: boolean;
-  includeBookings?: boolean;
   mapImageUrl?: string;
   format?: 'A4' | 'letter';
 }
@@ -91,7 +90,6 @@ export const generateTripPDF = async (
 ): Promise<void> => {
   const {
     includeMap = true,
-    includeBookings = true,
     mapImageUrl,
     format = 'A4'
   } = options;
@@ -142,8 +140,6 @@ export const generateTripPDF = async (
     doc.text(`Status: ${trip.status.replace('_', ' ')}`, margin, yPosition);
     yPosition += 6;
     doc.text(`Total Places: ${trip.places.length}`, margin, yPosition);
-    yPosition += 6;
-    doc.text(`Hotel Bookings: ${trip.bookings.length}`, margin, yPosition);
     yPosition += 15;
 
     // Places Table
@@ -214,49 +210,6 @@ export const generateTripPDF = async (
       }
     }
 
-    // Bookings section
-    if (includeBookings && trip.bookings.length > 0) {
-      if (yPosition > 200) { // Start new page if needed
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Hotel Bookings', margin, yPosition);
-      yPosition += 10;
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      trip.bookings.forEach((booking, index) => {
-        if (yPosition > 250) { // Start new page if needed
-          doc.addPage();
-          yPosition = 20;
-        }
-
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${index + 1}. ${booking.hotelName}`, margin, yPosition);
-        yPosition += 6;
-
-        doc.setFont('helvetica', 'normal');
-        doc.text(`District: ${booking.district}`, margin + 5, yPosition);
-        yPosition += 5;
-        doc.text(`Check-in: ${formatDate(booking.checkIn)}`, margin + 5, yPosition);
-        yPosition += 5;
-        doc.text(`Check-out: ${formatDate(booking.checkOut)}`, margin + 5, yPosition);
-        yPosition += 5;
-        doc.text(`Price: LKR ${booking.price.toLocaleString()}`, margin + 5, yPosition);
-        yPosition += 5;
-        doc.text(`Status: ${booking.status}`, margin + 5, yPosition);
-        yPosition += 10;
-      });
-
-      // Total cost
-      const totalCost = trip.bookings.reduce((sum, booking) => sum + booking.price, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Total Accommodation Cost: LKR ${totalCost.toLocaleString()}`, margin, yPosition);
-    }
 
     // Footer
     const pageCount = doc.internal.getNumberOfPages();
@@ -286,7 +239,6 @@ export const generateTripPDF = async (
 // Generate HTML content for printing
 const generatePrintHTML = (trip: Trip): string => {
   const duration = calculateDuration(trip.startDate, trip.endDate);
-  const totalCost = trip.bookings.reduce((sum, booking) => sum + booking.price, 0);
 
   return `
     <!DOCTYPE html>
@@ -343,20 +295,6 @@ const generatePrintHTML = (trip: Trip): string => {
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
           }
-          .booking-item {
-            margin: 15px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-          }
-          .total-cost {
-            font-weight: bold;
-            font-size: 16px;
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-          }
         }
         @media screen {
           body {
@@ -407,7 +345,6 @@ const generatePrintHTML = (trip: Trip): string => {
 
         <div class="section-title">Trip Overview</div>
         <p><strong>Total Places:</strong> ${trip.places.length}</p>
-        <p><strong>Hotel Bookings:</strong> ${trip.bookings.length}</p>
         <p><strong>Districts Covered:</strong> ${trip.districts.join(', ')}</p>
 
         <div class="section-title">Itinerary</div>
@@ -431,24 +368,6 @@ const generatePrintHTML = (trip: Trip): string => {
             `).join('')}
           </tbody>
         </table>
-
-        ${trip.bookings.length > 0 ? `
-          <div class="section-title page-break">Hotel Bookings</div>
-          ${trip.bookings.map((booking, index) => `
-            <div class="booking-item">
-              <h4>${index + 1}. ${booking.hotelName}</h4>
-              <p><strong>District:</strong> ${booking.district}</p>
-              <p><strong>Check-in:</strong> ${formatDate(booking.checkIn)}</p>
-              <p><strong>Check-out:</strong> ${formatDate(booking.checkOut)}</p>
-              <p><strong>Price:</strong> LKR ${booking.price.toLocaleString()}</p>
-              <p><strong>Status:</strong> ${booking.status}</p>
-            </div>
-          `).join('')}
-          
-          <div class="total-cost">
-            Total Accommodation Cost: LKR ${totalCost.toLocaleString()}
-          </div>
-        ` : ''}
 
         <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #666;">
           Generated on ${new Date().toLocaleDateString()} | Sri Lanka Trip Planner

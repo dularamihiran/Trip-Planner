@@ -40,120 +40,6 @@ export const userApi = {
     });
     return response.json();
   },
-
-  async getAvatarUploadUrl(userId: string, fileType: string) {
-    const response = await fetch(`${API_URL}/users/${userId}/avatar-upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileType }),
-    });
-    return response.json();
-  },
-
-  async uploadAvatar(userId: string, file: File) {
-    // Get presigned URL
-    const { uploadUrl, avatarUrl } = await this.getAvatarUploadUrl(userId, file.type);
-    
-    // Upload to S3
-    await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file,
-    });
-
-    // Update user profile with new avatar URL
-    return this.updateProfile(userId, { avatarUrl });
-  },
-};
-
-// Hotel API
-export const hotelApi = {
-  async getAll(district?: string, minPrice?: number, maxPrice?: number) {
-    const params = new URLSearchParams();
-    if (district) params.append('district', district);
-    if (minPrice) params.append('minPrice', minPrice.toString());
-    if (maxPrice) params.append('maxPrice', maxPrice.toString());
-    
-    const response = await fetch(`${API_URL}/hotels?${params}`);
-    return response.json();
-  },
-
-  async getById(hotelId: string) {
-    const response = await fetch(`${API_URL}/hotels/${hotelId}`);
-    return response.json();
-  },
-
-  async create(hotelData: {
-    name: string;
-    district: string;
-    price: number;
-    rooms: number;
-    ownerId: string;
-    description?: string;
-    address?: string;
-    amenities?: string[];
-    contactPhone?: string;
-    contactEmail?: string;
-    city?: string;
-    latitude?: number;
-    longitude?: number;
-  }) {
-    const response = await fetch(`${API_URL}/hotels`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(hotelData),
-    });
-    return response.json();
-  },
-
-  async update(hotelId: string, hotelData: any) {
-    const response = await fetch(`${API_URL}/hotels/${hotelId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(hotelData),
-    });
-    return response.json();
-  },
-
-  async delete(hotelId: string) {
-    const response = await fetch(`${API_URL}/hotels/${hotelId}`, {
-      method: 'DELETE',
-    });
-    return response.json();
-  },
-
-  async getImageUploadUrl(hotelId: string, fileType: string) {
-    const response = await fetch(`${API_URL}/hotels/${hotelId}/image-upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileType }),
-    });
-    return response.json();
-  },
-
-  async uploadImage(hotelId: string, file: File) {
-    // Get presigned URL
-    const { uploadUrl, imageUrl } = await this.getImageUploadUrl(hotelId, file.type);
-    
-    // Upload to S3
-    await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file,
-    });
-
-    return { imageUrl };
-  },
-
-  async getByOwner(ownerId: string) {
-    const response = await fetch(`${API_URL}/hotels/owner/${ownerId}`);
-    return response.json();
-  },
-
-  async getByDistrict(district: string) {
-    const response = await fetch(`${API_URL}/hotels/district/${district}`);
-    return response.json();
-  },
 };
 
 // Trip API
@@ -253,35 +139,6 @@ export const tripApi = {
   },
 };
 
-// Booking API (for future use)
-export const bookingApi = {
-  async create(bookingData: {
-    userId: string;
-    hotelId: string;
-    checkIn: string;
-    checkOut: string;
-    guests: number;
-    roomType?: string;
-  }) {
-    const response = await fetch(`${API_URL}/bookings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bookingData),
-    });
-    return response.json();
-  },
-
-  async getUserBookings(userId: string) {
-    const response = await fetch(`${API_URL}/bookings/user/${userId}`);
-    return response.json();
-  },
-
-  async getHotelBookings(hotelId: string) {
-    const response = await fetch(`${API_URL}/bookings/hotel/${hotelId}`);
-    return response.json();
-  },
-};
-
 // Health check
 export const healthApi = {
   async check() {
@@ -292,8 +149,6 @@ export const healthApi = {
 
 export default {
   userApi,
-  hotelApi,
   tripApi,
-  bookingApi,
   healthApi,
 };

@@ -22,5 +22,4 @@ export interface AdminStats {
   totalUsers: number;
   activeUsers: number;
   totalTrips: number;
-  totalBookings: number;
 }

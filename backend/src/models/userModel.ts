@@ -1,15 +1,15 @@
 /**
  * User Model
- * Represents a user in the system (Tourist, Hotel Owner, or Admin)
+ * Represents a user in the system (Tourist or Admin)
  */
 export interface User {
   userId: string; // Partition Key (PK) - UUID
   email: string; // Global Secondary Index (GSI) for login
   name: string;
   password: string; // Hashed password
-  role: 'USER' | 'HOTEL_OWNER' | 'ADMIN';
+  role: 'USER' | 'ADMIN';
   phone?: string;
-  avatarUrl?: string; // S3 URL for profile picture
+  avatarUrl?: string; // URL for profile picture
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }
@@ -22,7 +22,7 @@ export interface CreateUserDTO {
   email: string;
   name: string;
   password: string;
-  role?: 'USER' | 'HOTEL_OWNER' | 'ADMIN';
+  role?: 'USER' | 'ADMIN';
   phone?: string;
 }
 

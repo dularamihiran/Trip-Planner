@@ -6,10 +6,8 @@ import Link from 'next/link';
 import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import TripHeader from '@/components/ui/TripHeader';
 import TripPlaceList from '@/components/ui/TripPlaceList';
-import BookingList from '@/components/ui/BookingList';
 import MapPanel from '@/components/ui/MapPanel';
-import UpdateBookingModal from '@/components/ui/UpdateBookingModal';
-import { Trip, Booking } from '@/types/trip';
+import { Trip } from '@/types/trip';
 import { downloadItinerary, printTripItinerary } from '@/utils/pdfGenerator';
 
 export default function TripDetailsPage() {
@@ -18,41 +16,62 @@ export default function TripDetailsPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [optimisticUpdates, setOptimisticUpdates] = useState<{ [key: string]: any }>({});
 
-  useEffect(() => {
-    const fetchTripDetails = async () => {
+  const fetchTripDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch trip main details
+      const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Trip not found');
+        }
+        throw new Error('Failed to fetch trip details');
+      }
+      
+      const tripData = await response.json();
+      
+      // Fetch detailed places associated with this trip
+      let fullPlaces: any[] = [];
       try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch from backend API
-        const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
+        const placesResponse = await fetch(`http://localhost:5000/api/trips/${tripId}/places`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
         });
         
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Trip not found');
-          }
-          throw new Error('Failed to fetch trip details');
+        if (placesResponse.ok) {
+          const placesData = await placesResponse.json();
+          fullPlaces = placesData.places || [];
         }
-        
-        const tripData = await response.json();
-        setTrip(tripData);
-      } catch (err) {
-        console.error('Error fetching trip details:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load trip details');
-      } finally {
-        setLoading(false);
+      } catch (placeErr) {
+        console.error('Error fetching trip places:', placeErr);
       }
-    };
+      
+      const mergedTrip = {
+        ...tripData,
+        places: fullPlaces
+      };
+      
+      setTrip(mergedTrip);
+    } catch (err) {
+      console.error('Error fetching trip details:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load trip details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (tripId) {
       fetchTripDetails();
     }
@@ -66,116 +85,85 @@ export default function TripDetailsPage() {
       // Optimistic update
       setTrip(prev => prev ? { ...prev, status: newStatus } : null);
       
-      // TODO: Make actual API call
-      // await fetch(`/api/trips/${tripId}`, {
-      //   method: 'PATCH',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      //   body: JSON.stringify({ status: newStatus }),
-      // });
+      const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update trip status');
+      }
       
       console.log(`Trip ${tripId} status updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating trip status:', error);
-      // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, status: trip.status } : null);
+      fetchTripDetails();
     }
   };
 
-  // Handle marking place as done
-  const handleMarkPlaceDone = async (placeId: string) => {
-    if (!trip) return;
+  // Handle place status change
+  const handlePlaceStatusChange = async (placeId: string, status: 'PLANNED' | 'DONE') => {
+    if (!trip || !trip.places) return;
 
     try {
-      // TODO: Implement optimistic UI update for place status
-      // For now, just log the action
-      console.log(`Marking place ${placeId} as done`);
-      
-      // TODO: Make actual API call
-      // await fetch(`/api/trips/${tripId}/places/${placeId}`, {
-      //   method: 'PATCH',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      //   body: JSON.stringify({ status: 'DONE' }),
-      // });
-      
-      alert('Place marked as done! (This will be integrated with backend)');
+      // Optimistic update
+      const updatedPlaces = trip.places.map((place) => {
+        if (place.placeId === placeId) {
+          return { ...place, visitStatus: status };
+        }
+        return place;
+      });
+      setTrip(prev => prev ? { ...prev, places: updatedPlaces } : null);
+
+      // Make actual PATCH API call to backend
+      const response = await fetch(`http://localhost:5000/api/trips/${trip.tripId}/places/${placeId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ visitStatus: status }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update place status');
+      }
+
+      console.log(`Place ${placeId} status updated to ${status}`);
     } catch (error) {
-      console.error('Error marking place as done:', error);
+      console.error('Error updating place status:', error);
+      // Revert on error
+      fetchTripDetails();
     }
   };
 
   // Handle removing place from trip
   const handleRemovePlace = async (placeId: string) => {
-    if (!trip) return;
+    if (!trip || !trip.places) return;
 
     try {
       // Optimistic update
       const updatedPlaces = trip.places.filter(place => place.placeId !== placeId);
       setTrip(prev => prev ? { ...prev, places: updatedPlaces } : null);
       
-      // TODO: Make actual API call
-      // await fetch(`/api/trips/${tripId}/places/${placeId}`, {
-      //   method: 'DELETE',
-      //   headers: {
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      // });
+      // Make actual DELETE API call
+      const response = await fetch(`http://localhost:5000/api/trips/${trip.tripId}/places/${placeId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to remove place');
+      }
       
       console.log(`Removed place ${placeId} from trip`);
     } catch (error) {
       console.error('Error removing place:', error);
-      // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, places: trip.places || [] } : null);
+      fetchTripDetails();
     }
   };
 
-  // Handle updating booking
-  const handleUpdateBooking = (bookingId: string) => {
-    if (!trip) return;
-    const booking = (trip.bookings || []).find(b => b.bookingId === bookingId);
-    if (booking) {
-      setSelectedBooking(booking);
-      setIsUpdateModalOpen(true);
-    }
-  };
-
-  // Handle booking update submission
-  const handleBookingUpdateSubmit = async (bookingId: string, updates: Partial<Booking>) => {
-    if (!trip) return;
-
-    try {
-      // Optimistic update
-      const updatedBookings = (trip.bookings || []).map(booking => 
-        booking.bookingId === bookingId 
-          ? { ...booking, ...updates }
-          : booking
-      );
-      setTrip(prev => prev ? { ...prev, bookings: updatedBookings } : null);
-      
-      // TODO: Make actual API call
-      // await fetch(`/api/bookings/${bookingId}`, {
-      //   method: 'PATCH',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      //   body: JSON.stringify(updates),
-      // });
-      
-      console.log(`Updated booking ${bookingId}:`, updates);
-      setIsUpdateModalOpen(false);
-      setSelectedBooking(null);
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, bookings: trip.bookings || [] } : null);
-    }
-  };
 
   // Handle PDF download
   const handleDownloadPDF = async (trip: Trip) => {
@@ -183,7 +171,6 @@ export default function TripDetailsPage() {
       await downloadItinerary(trip);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      // You could add a toast notification here
     }
   };
 
@@ -193,38 +180,9 @@ export default function TripDetailsPage() {
       await printTripItinerary(trip);
     } catch (error) {
       console.error('Error printing itinerary:', error);
-      // You could add a toast notification here
     }
   };
 
-  // Handle canceling booking
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!trip) return;
-
-    try {
-      // Optimistic update
-      const updatedBookings = (trip.bookings || []).map(booking => 
-        booking.bookingId === bookingId 
-          ? { ...booking, status: 'CANCELLED' as const }
-          : booking
-      );
-      setTrip(prev => prev ? { ...prev, bookings: updatedBookings } : null);
-      
-      // TODO: Make actual API call
-      // await fetch(`/api/bookings/${bookingId}`, {
-      //   method: 'DELETE',
-      //   headers: {
-      //     'Authorization': `Bearer ${getAuthToken()}`,
-      //   },
-      // });
-      
-      console.log(`Cancelled booking ${bookingId}`);
-    } catch (error) {
-      console.error('Error canceling booking:', error);
-      // Revert optimistic update on error
-      setTrip(prev => prev ? { ...prev, bookings: trip.bookings || [] } : null);
-    }
-  };
 
   if (loading) {
     return (
@@ -299,12 +257,9 @@ export default function TripDetailsPage() {
         <div className="mb-6">
           <Link
             href="/dashboard"
-            className="inline-flex items-center text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
           >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
+            ← Back to Dashboard
           </Link>
         </div>
 
@@ -320,64 +275,92 @@ export default function TripDetailsPage() {
               onPrintItinerary={handlePrintItinerary}
             />
 
+            {/* Next Destination Banner Widget */}
+            {(() => {
+              const plannedPlaces = trip.places?.filter(p => p.visitStatus !== 'DONE') || [];
+              const nextPlace = plannedPlaces[0];
+
+              if (trip.places && trip.places.length > 0 && plannedPlaces.length === 0) {
+                return (
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-md relative overflow-hidden animate-fadeIn border border-emerald-400/20">
+                    <div className="absolute right-4 bottom-0 opacity-15 text-7xl select-none">🏆</div>
+                    <span className="bg-emerald-400/35 border border-emerald-300/40 text-white text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Trip Accomplished
+                    </span>
+                    <h3 className="text-xl font-extrabold mt-3 mb-1">🎉 Adventure Completed!</h3>
+                    <p className="text-sm text-emerald-100 font-medium">
+                      Congratulations! You have successfully visited all {trip.places.length} places in your itinerary.
+                    </p>
+                  </div>
+                );
+              }
+
+              if (nextPlace) {
+                return (
+                  <div className="bg-gradient-to-r from-blue-900 to-indigo-950 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden border border-blue-500/20 animate-fadeIn">
+                    <div className="absolute right-4 bottom-0 opacity-10 text-7xl select-none">🚀</div>
+                    
+                    <span className="bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                      Next Stop on Route
+                    </span>
+                    
+                    <h3 className="text-2xl font-extrabold mt-3 mb-1 text-white truncate">
+                      {nextPlace.name}
+                    </h3>
+                    
+                    <p className="text-sm text-blue-100 flex items-center mb-4 font-semibold">
+                      🏷️ {nextPlace.category} • 📍 {nextPlace.district}
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-blue-800/50 pt-4">
+                      <div className="text-xs text-blue-200 font-medium">
+                        {plannedPlaces.length - 1 === 0 
+                          ? 'This is the final destination on your route!' 
+                          : `Then ${plannedPlaces.length - 1} remaining destinations left on your trip path.`
+                        }
+                      </div>
+                      
+                      <button
+                        onClick={() => handlePlaceStatusChange(nextPlace.placeId, 'DONE')}
+                        className="inline-flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:shadow-lg active:scale-95 transition-all duration-150"
+                      >
+                        ✅ Mark as Completed
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
             {/* Places in Itinerary */}
             <TripPlaceList
               places={trip.places || []}
               tripStatus={trip.status}
-              onMarkDone={handleMarkPlaceDone}
+              tripId={trip.tripId}
+              onMarkDone={(placeId) => handlePlaceStatusChange(placeId, 'DONE')}
               onRemovePlace={handleRemovePlace}
-            />
-
-            {/* Hotel Bookings */}
-            <BookingList
-              bookings={trip.bookings || []}
-              onUpdateBooking={handleUpdateBooking}
-              onCancelBooking={handleCancelBooking}
+              onStatusChange={handlePlaceStatusChange}
             />
 
             {/* Action Buttons */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-150 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Link
-                  href={`/assistant/${trip.tripId}`}
-                  className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  Open Trip Assistant
-                </Link>
-                
-                <Link
                   href={`/path?tripId=${trip.tripId}`}
-                  className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                  className="inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow transition-colors duration-200"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  View Route Planning
+                  🗺️ View Route Planning
                 </Link>
                 
                 <Link
-                  href={`/hotels?tripId=${trip.tripId}`}
-                  className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                  href={`/trips/${trip.tripId}/ai-itinerary`}
+                  className="inline-flex items-center justify-center bg-indigo-900 hover:bg-indigo-950 text-white px-6 py-3 rounded-xl font-bold shadow transition-colors duration-200"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Manage Hotels
+                  ⚡ View AI Smart Path
                 </Link>
-                
-                <button
-                  onClick={() => alert('Edit trip functionality will be implemented with backend integration')}
-                  className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit Trip Details
-                </button>
               </div>
             </div>
           </div>
@@ -385,23 +368,12 @@ export default function TripDetailsPage() {
           {/* Right Column - Map Panel */}
           <div className="lg:col-span-1">
             <MapPanel 
-              places={trip.places}
+              places={trip.places || []}
               tripName={trip.tripName}
             />
           </div>
         </div>
       </div>
-
-      {/* Update Booking Modal */}
-      <UpdateBookingModal
-        isOpen={isUpdateModalOpen}
-        onClose={() => {
-          setIsUpdateModalOpen(false);
-          setSelectedBooking(null);
-        }}
-        booking={selectedBooking}
-        onUpdate={handleBookingUpdateSubmit}
-      />
     </div>
   );
 }

@@ -44,7 +44,7 @@ npm run dev
 ## 🗄️ Database: MongoDB Atlas
 - **Status**: ✅ Connected
 - **Database Name**: trip_planner
-- **Collections**: users, trips, bookings
+- **Collections**: users, trips, places
 
 ## 📁 Project Structure
 
@@ -52,7 +52,7 @@ npm run dev
 backend/
 ├── src/
 │   ├── config/
-│   │   └── database.ts       # MongoDB connection
+│   │   └── mongodb.ts        # MongoDB connection
 │   ├── models/
 │   │   └── index.ts          # TypeScript interfaces
 │   ├── routes/

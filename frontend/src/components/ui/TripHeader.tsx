@@ -176,10 +176,38 @@ const TripHeader: React.FC<TripHeaderProps> = ({ trip, onStatusChange, onDownloa
           <div className="text-xs text-gray-600">Districts</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-orange-600">{trip.bookings?.length || 0}</div>
-          <div className="text-xs text-gray-600">Hotels</div>
+          <div className="text-xl font-bold text-teal-600">
+            {trip.places && trip.places.length > 0
+              ? Math.round((trip.places.filter(p => p.visitStatus === 'DONE').length / trip.places.length) * 100)
+              : 0}%
+          </div>
+          <div className="text-xs text-gray-600">Completed</div>
         </div>
       </div>
+
+      {/* Premium Horizontal Progress Bar */}
+      {trip.places && trip.places.length > 0 && (
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          <div className="flex justify-between items-center text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <span>Overall Travel Progress</span>
+            <span className="text-emerald-700">
+              {trip.places.filter(p => p.visitStatus === 'DONE').length} of {trip.places.length} places visited
+            </span>
+          </div>
+          <div className="w-full bg-gray-200/70 rounded-full h-3 overflow-hidden border border-gray-100">
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${
+                  ((trip.places.filter(p => p.visitStatus === 'DONE').length) /
+                    trip.places.length) *
+                  100
+                }%`,
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
 
       {/* Districts */}
       {trip.districts && trip.districts.length > 0 && (

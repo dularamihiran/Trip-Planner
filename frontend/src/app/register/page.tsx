@@ -12,8 +12,7 @@ export default function RegisterPage() {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    userType: 'tourist' // tourist, hotel_owner, admin
+    confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -48,8 +47,7 @@ export default function RegisterPage() {
     setError('');
     
     try {
-      // Map userType to role expected by backend
-      const role = formData.userType === 'hotel_owner' ? 'HOTEL_OWNER' : 'USER';
+      const role = 'USER';
       const fullName = `${formData.firstName} ${formData.lastName}`;
       
       const response = await userApi.register(
@@ -61,17 +59,16 @@ export default function RegisterPage() {
 
       console.log('Registration successful:', response);
 
+      if (!response?.user || !response?.token) {
+        throw new Error(response?.error || 'Registration failed. Please try again.');
+      }
+
       // Save user data and token to localStorage
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('token', response.token);
       localStorage.setItem('userId', response.user.userId);
 
-      // Redirect based on role
-      if (response.user.role === 'HOTEL_OWNER') {
-        router.push('/hotels');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
@@ -111,23 +108,6 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
-
-            {/* User Type Selection */}
-            <div>
-              <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
-                Account Type
-              </label>
-              <select
-                id="userType"
-                name="userType"
-                value={formData.userType}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 bg-white/50 backdrop-blur-sm"
-              >
-                <option value="tourist">Tourist</option>
-                <option value="hotel_owner">Hotel Owner</option>
-              </select>
-            </div>
 
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
