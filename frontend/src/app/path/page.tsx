@@ -5,6 +5,7 @@ import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import PlaceList from '@/components/ui/PlaceList';
 import FreeMapComponent from '@/components/ui/FreeMapComponent';
 import SearchBar from '@/components/ui/SearchBar';
+import AiRecommendations from '@/components/ui/AiRecommendations';
 
 // Type definitions
 export interface Place {
@@ -16,6 +17,7 @@ export interface Place {
   lng: number;
   description?: string;
   isSelected: boolean;
+  estimatedCost?: number;
 }
 
 // Mock suggested places based on popular Sri Lankan destinations
@@ -85,57 +87,220 @@ const mockSuggestedPlaces: Place[] = [
 export default function PathCreationPage() {
   const [suggestedPlaces, setSuggestedPlaces] = useState<Place[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
+  const [activeTab, setActiveTab] = useState<'database' | 'ai'>('ai');
+  const [daysCount, setDaysCount] = useState<number>(3);
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const [totalDuration, setTotalDuration] = useState<string>('');
   const [mapCenter, setMapCenter] = useState({ lat: 7.8731, lng: 80.7718 }); // Sri Lanka center
   const [tripInfo, setTripInfo] = useState<any>(null);
 
-  // Load suggestions from localStorage on mount
+  // Load suggestions from database or localStorage on mount
   useEffect(() => {
-    const storedPlaces = localStorage.getItem('suggestedPlaces');
-    const storedTripData = localStorage.getItem('tripData');
-    const storedSummary = localStorage.getItem('suggestionsSummary');
+    const loadFromDatabaseOrStorage = async () => {
+      // Parse tripId search param safely in useEffect
+      const params = new URLSearchParams(window.location.search);
+      const tripIdParam = params.get('tripId');
 
-    if (storedPlaces) {
-      try {
-        const apiPlaces = JSON.parse(storedPlaces);
-        
-        // Transform API place format to our Place interface
-        const transformedPlaces: Place[] = apiPlaces.map((place: any) => ({
-          id: place.placeId,
-          name: place.name,
-          category: place.category,
-          address: place.district,
-          lat: place.lat,
-          lng: place.lng,
-          description: place.description,
-          isSelected: false
-        }));
-        
-        setSuggestedPlaces(transformedPlaces);
-        
-        // Set map center to first place with valid coordinates
-        const firstValidPlace = transformedPlaces.find(p => p.lat != null && p.lng != null);
-        if (firstValidPlace) {
-          setMapCenter({ lat: firstValidPlace.lat, lng: firstValidPlace.lng });
+      if (tripIdParam) {
+        try {
+          // 1. Fetch trip details from backend database
+          const response = await fetch(`http://localhost:5000/api/trips/${tripIdParam}`);
+          if (!response.ok) throw new Error('Trip not found in database');
+          
+          const tripData = await response.json();
+          
+          // Parse starting point from description if available
+          let startPoint = '';
+          if (tripData.description && tripData.description.includes('Starting location:')) {
+            const match = tripData.description.match(/Starting location:\s*([^.]+)/);
+            if (match && match[1]) {
+              startPoint = match[1].trim();
+            }
+          }
+
+          const info = {
+            name: tripData.tripName,
+            startDate: tripData.startDate.split('T')[0],
+            endDate: tripData.endDate.split('T')[0],
+            budget: tripData.budget || 250000,
+            startPoint: startPoint || 'Colombo',
+            districts: tripData.districts || []
+          };
+          setTripInfo(info);
+
+          // Calculate number of days
+          if (tripData.startDate && tripData.endDate) {
+            const start = new Date(tripData.startDate);
+            const end = new Date(tripData.endDate);
+            const timeDiff = end.getTime() - start.getTime();
+            const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+            if (!isNaN(days) && days > 0) {
+              setDaysCount(days);
+            }
+          }
+
+          // 2. Fetch detailed places for this trip from backend database
+          const placesResponse = await fetch(`http://localhost:5000/api/trips/${tripIdParam}/places`);
+          let transformedSelected: Place[] = [];
+          if (placesResponse.ok) {
+            const placesData = await placesResponse.json();
+            const apiPlaces = placesData.places || [];
+            
+            // Transform detailed places and filter out duplicates by name
+            const uniquePlaces: any[] = [];
+            const seenNames = new Set<string>();
+            
+            for (const place of apiPlaces) {
+              const nameLower = place.name.toLowerCase().trim();
+              if (!seenNames.has(nameLower)) {
+                seenNames.add(nameLower);
+                uniquePlaces.push(place);
+              }
+            }
+
+            transformedSelected = uniquePlaces.map((place: any) => ({
+              id: place.placeId,
+              name: place.name,
+              category: place.category,
+              address: place.district,
+              lat: place.latitude || place.lat || 0,
+              lng: place.longitude || place.lng || 0,
+              description: place.description || '',
+              isSelected: true,
+              estimatedCost: place.estimatedCost || 0
+            }));
+            setSelectedPlaces(transformedSelected);
+
+            if (transformedSelected.length > 0) {
+              setMapCenter({ lat: transformedSelected[0].lat, lng: transformedSelected[0].lng });
+            }
+          }
+
+          // 3. Fetch attraction suggestions for the trip's districts to show in Suggested Places
+          if (tripData.districts && tripData.districts.length > 0) {
+            try {
+              const suggestions = await fetch('http://localhost:5000/api/trips/suggest-places', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  districts: tripData.districts,
+                  interests: ['Historical Sites', 'Beaches', 'Wildlife', 'Adventure Sports', 'Cultural Experiences', 'Tea Plantations', 'Religious Sites', 'Hill Country'],
+                  budget: '100000-200000',
+                  travelers: 1
+                })
+              });
+              
+              if (suggestions.ok) {
+                const suggData = await suggestions.json();
+                const suggPlaces = suggData.places || [];
+                
+                // De-duplicate suggested attractions by name
+                const uniqueSugg: any[] = [];
+                const seenSuggNames = new Set<string>();
+                for (const p of suggPlaces) {
+                  const nameLower = p.name.toLowerCase().trim();
+                  if (!seenSuggNames.has(nameLower)) {
+                    seenSuggNames.add(nameLower);
+                    uniqueSugg.push(p);
+                  }
+                }
+
+                const transformedSuggested: Place[] = uniqueSugg.map((place: any) => {
+                  const isAlreadySelected = transformedSelected.some(
+                    (sp) => sp.name.toLowerCase().trim() === place.name.toLowerCase().trim()
+                  );
+                  return {
+                    id: place.placeId,
+                    name: place.name,
+                    category: place.category,
+                    address: place.district,
+                    lat: place.lat || place.latitude || 0,
+                    lng: place.lng || place.longitude || 0,
+                    description: place.description || '',
+                    isSelected: isAlreadySelected,
+                    estimatedCost: place.estimatedCost || 0
+                  };
+                });
+                setSuggestedPlaces(transformedSuggested);
+
+                if (transformedSelected.length === 0 && transformedSuggested.length > 0) {
+                  setMapCenter({ lat: transformedSuggested[0].lat, lng: transformedSuggested[0].lng });
+                }
+              } else {
+                setSuggestedPlaces(mockSuggestedPlaces);
+              }
+            } catch (err) {
+              console.error('Error loading dynamic suggestions:', err);
+              setSuggestedPlaces(mockSuggestedPlaces);
+            }
+          } else {
+            setSuggestedPlaces(mockSuggestedPlaces);
+          }
+
+        } catch (error) {
+          console.error('Error loading trip from database:', error);
+          setSuggestedPlaces(mockSuggestedPlaces);
         }
-      } catch (error) {
-        console.error('Error loading suggestions:', error);
-        // Fallback to mock data
-        setSuggestedPlaces(mockSuggestedPlaces);
-      }
-    } else {
-      // No suggestions in storage, use mock data
-      setSuggestedPlaces(mockSuggestedPlaces);
-    }
+      } else {
+        // Normal creation flow: load from localStorage
+        const storedPlaces = localStorage.getItem('suggestedPlaces');
+        const storedTripData = localStorage.getItem('tripData');
 
-    if (storedTripData) {
-      try {
-        setTripInfo(JSON.parse(storedTripData));
-      } catch (error) {
-        console.error('Error loading trip data:', error);
+        if (storedPlaces) {
+          try {
+            const apiPlaces = JSON.parse(storedPlaces);
+            
+            // Transform API place format to our Place interface
+            const transformedPlaces: Place[] = apiPlaces.map((place: any) => ({
+              id: place.placeId,
+              name: place.name,
+              category: place.category,
+              address: place.district,
+              lat: place.lat,
+              lng: place.lng,
+              description: place.description,
+              isSelected: false,
+              estimatedCost: place.estimatedCost
+            }));
+            
+            setSuggestedPlaces(transformedPlaces);
+            
+            // Set map center to first place with valid coordinates
+            const firstValidPlace = transformedPlaces.find(p => p.lat != null && p.lng != null);
+            if (firstValidPlace) {
+              setMapCenter({ lat: firstValidPlace.lat, lng: firstValidPlace.lng });
+            }
+          } catch (error) {
+            console.error('Error loading suggestions:', error);
+            setSuggestedPlaces(mockSuggestedPlaces);
+          }
+        } else {
+          setSuggestedPlaces(mockSuggestedPlaces);
+        }
+
+        if (storedTripData) {
+          try {
+            const parsed = JSON.parse(storedTripData);
+            setTripInfo(parsed);
+            
+            // Calculate number of days
+            if (parsed.startDate && parsed.endDate) {
+              const start = new Date(parsed.startDate);
+              const end = new Date(parsed.endDate);
+              const timeDiff = end.getTime() - start.getTime();
+              const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+              if (!isNaN(days) && days > 0) {
+                setDaysCount(days);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading trip data:', error);
+          }
+        }
       }
-    }
+    };
+
+    loadFromDatabaseOrStorage();
   }, []);
 
   // Calculate route statistics when selected places change
@@ -177,28 +342,60 @@ export default function PathCreationPage() {
   }, [selectedPlaces]);
 
   const handleAddToPath = (place: Place) => {
+    // Prevent duplicate additions by name
+    if (selectedPlaces.some(p => p.name.toLowerCase().trim() === place.name.toLowerCase().trim())) {
+      return;
+    }
+
     // Add to selected places
     setSelectedPlaces(prev => [...prev, { ...place, isSelected: true }]);
     
-    // Update suggested places to mark as selected
+    // Update suggested places to mark as selected by name
     setSuggestedPlaces(prev =>
-      prev.map(p => p.id === place.id ? { ...p, isSelected: true } : p)
+      prev.map(p => p.name.toLowerCase().trim() === place.name.toLowerCase().trim() ? { ...p, isSelected: true } : p)
     );
   };
 
   const handleRemoveFromPath = (placeId: string) => {
+    // Find name of place being removed
+    const placeToRemove = selectedPlaces.find(p => p.id === placeId);
+    if (!placeToRemove) return;
+
     // Remove from selected places
     setSelectedPlaces(prev => prev.filter(p => p.id !== placeId));
     
-    // Update suggested places to mark as not selected
+    // Update suggested places to mark as not selected by name
     setSuggestedPlaces(prev =>
-      prev.map(p => p.id === placeId ? { ...p, isSelected: false } : p)
+      prev.map(p => p.name.toLowerCase().trim() === placeToRemove.name.toLowerCase().trim() ? { ...p, isSelected: false } : p)
     );
   };
 
+  const handleApplyItinerary = (itineraryPlaces: Place[]) => {
+    setSelectedPlaces(itineraryPlaces.map(p => ({ ...p, isSelected: true })));
+    
+    // Also update suggestedPlaces selected state by name
+    const selectedNames = new Set(itineraryPlaces.map(p => p.name.toLowerCase().trim()));
+    setSuggestedPlaces(prev =>
+      prev.map(p => ({ ...p, isSelected: selectedNames.has(p.name.toLowerCase().trim()) }))
+    );
+    
+    alert('🎉 AI Suggested Itinerary applied successfully! You can now reorder, add, or remove places using the standard controls.');
+  };
+
   const handleSearchResult = (newPlace: Place) => {
+    // Prevent duplicate additions by name
+    if (selectedPlaces.some(p => p.name.toLowerCase().trim() === newPlace.name.toLowerCase().trim())) {
+      alert(`"${newPlace.name}" is already in your travel path!`);
+      return;
+    }
+
     // Add the searched place to both lists
-    setSuggestedPlaces(prev => [...prev, newPlace]);
+    setSuggestedPlaces(prev => {
+      if (prev.some(p => p.name.toLowerCase().trim() === newPlace.name.toLowerCase().trim())) {
+        return prev.map(p => p.name.toLowerCase().trim() === newPlace.name.toLowerCase().trim() ? { ...p, isSelected: true } : p);
+      }
+      return [...prev, newPlace];
+    });
     setSelectedPlaces(prev => [...prev, { ...newPlace, isSelected: true }]);
   };
 
@@ -219,30 +416,66 @@ export default function PathCreationPage() {
 
       const user = JSON.parse(userStr);
       
-      // Create trip in MongoDB
-      const tripResponse = await fetch('http://localhost:5000/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.userId,
-          tripName: tripInfo?.name || 'My Sri Lankan Adventure',
-          startDate: tripInfo?.startDate || new Date().toISOString().split('T')[0],
-          endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
-          districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
-          budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
-          description: `Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance`
-        }),
-      });
+      let tripId = '';
+      const params = new URLSearchParams(window.location.search);
+      const tripIdParam = params.get('tripId');
+      const isEditing = !!tripIdParam;
 
-      const tripData = await tripResponse.json();
-      
-      if (!tripData.trip) {
-        throw new Error(tripData.error || 'Failed to create trip');
+      if (isEditing) {
+        tripId = tripIdParam;
+        
+        // 1. Update trip details in database
+        const updateResponse = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripName: tripInfo?.name || 'My Sri Lankan Adventure',
+            startDate: tripInfo?.startDate || new Date().toISOString().split('T')[0],
+            endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
+            districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
+            budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
+            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update trip details');
+        }
+
+        // 2. Clear old places from database using our custom endpoint
+        const clearResponse = await fetch(`http://localhost:5000/api/trips/${tripId}/places`, {
+          method: 'DELETE',
+        });
+
+        if (!clearResponse.ok) {
+          throw new Error('Failed to clear old itinerary destinations');
+        }
+      } else {
+        // Create trip in MongoDB (Creation Mode)
+        const tripResponse = await fetch('http://localhost:5000/api/trips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.userId,
+            tripName: tripInfo?.name || 'My Sri Lankan Adventure',
+            startDate: tripInfo?.startDate || new Date().toISOString().split('T')[0],
+            endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
+            districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
+            budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
+            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`
+          }),
+        });
+
+        const tripData = await tripResponse.json();
+        
+        if (!tripData.trip) {
+          throw new Error(tripData.error || 'Failed to create trip');
+        }
+
+        tripId = tripData.trip.tripId;
       }
-
-      const tripId = tripData.trip.tripId;
       
-      // Add all selected places to the trip
+      // 3. Add all selected places to the trip
       for (const place of selectedPlaces) {
         await fetch(`http://localhost:5000/api/trips/${tripId}/places`, {
           method: 'POST',
@@ -258,9 +491,39 @@ export default function PathCreationPage() {
         });
       }
 
-      console.log('✅ Trip saved successfully!', tripData);
+      console.log('✅ Trip details and places saved successfully!');
+
+      // 4. Fetch AI Route Optimization for the selected places
+      try {
+        const optimizeResponse = await fetch('http://localhost:5000/api/ai/optimize-itinerary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            places: selectedPlaces.map(p => ({
+              name: p.name,
+              district: p.address,
+              category: p.category,
+              lat: p.lat,
+              lng: p.lng,
+              description: p.description,
+              estimatedCost: p.estimatedCost || 0
+            })),
+            days: daysCount,
+            budget: tripInfo?.budget || 'Medium',
+            startPoint: tripInfo?.startPoint || ''
+          })
+        });
+
+        if (optimizeResponse.ok) {
+          const optimizeData = await optimizeResponse.json();
+          localStorage.setItem(`aiItinerary_${tripId}`, JSON.stringify(optimizeData));
+          console.log('✅ AI Itinerary generated & saved!', optimizeData);
+        }
+      } catch (optimizeError) {
+        console.error('Error generating AI itinerary:', optimizeError);
+      }
       
-      // Save trip plan data to localStorage for hotel suggestions
+      // 5. Save trip plan data to localStorage
       const tripPlan = {
         tripId,
         selectedPlaces,
@@ -271,13 +534,16 @@ export default function PathCreationPage() {
       };
       
       localStorage.setItem('savedTripPlan', JSON.stringify(tripPlan));
-      
-      alert('🎉 Trip saved successfully! Now let\'s find some hotels.');
-      
-      // Navigate to hotels page to see hotel suggestions
-      window.location.href = '/hotels';
+
+      if (isEditing) {
+        alert('🎉 Itinerary path updated and dynamically reordered!');
+        window.location.href = `/trips/${tripId}`;
+      } else {
+        alert('🎉 Trip saved & AI Optimized successfully! Redirecting to your AI Smart Plan Itinerary.');
+        window.location.href = `/trips/${tripId}/ai-itinerary`;
+      }
     } catch (error: any) {
-      console.error('Error saving trip:', error);
+      console.error('Error saving trip plan:', error);
       alert('Failed to save trip: ' + error.message);
     }
   };
@@ -366,9 +632,9 @@ export default function PathCreationPage() {
             <button
               onClick={handleSaveTripPlan}
               disabled={selectedPlaces.length === 0}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-bold shadow-md hover:shadow-lg transition-all duration-200"
             >
-              Save Trip Plan
+              ⚡ Create Trip with AI
             </button>
             <button
               onClick={() => window.history.back()}

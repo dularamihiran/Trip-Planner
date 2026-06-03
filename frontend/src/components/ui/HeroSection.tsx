@@ -33,7 +33,7 @@ export default function HeroSection() {
 
         {/* Subtitle */}
         <p className="text-lg sm:text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed animate-fade-in-up animation-delay-600">
-          Discover breathtaking attractions, book comfortable hotels, and explore optimized routes easily. 
+          Discover breathtaking attractions, build personalized itineraries, and explore optimized routes easily.
           Your gateway to the pearl of the Indian Ocean awaits.
         </p>
 
@@ -58,8 +58,8 @@ export default function HeroSection() {
             <div className="text-gray-600">Tourist Attractions</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-primary-600 mb-2">500+</div>
-            <div className="text-gray-600">Hotels & Resorts</div>
+            <div className="text-2xl font-bold text-primary-600 mb-2">AI</div>
+            <div className="text-gray-600">Personalized Itineraries</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-primary-600 mb-2">24/7</div>

@@ -73,9 +73,7 @@ export const getCollection = async (collectionName: string) => {
 // Collection names
 export const Collections = {
   USERS: 'users',
-  HOTELS: 'hotels',
   TRIPS: 'trips',
-  BOOKINGS: 'bookings',
   PLACES: 'places',
 };
 

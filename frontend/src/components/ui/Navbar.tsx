@@ -89,12 +89,6 @@ export default function Navbar() {
                   <span>Dashboard</span>
                 </Link>
                 <Link 
-                  href="/hotels" 
-                  className="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
-                >
-                  Hotels
-                </Link>
-                <Link 
                   href="/profile" 
                   className="text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
                 >
@@ -168,13 +162,6 @@ export default function Navbar() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                     <span>Dashboard</span>
-                  </Link>
-                  <Link 
-                    href="/hotels"
-                    className="block px-3 py-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Hotels
                   </Link>
                   <Link 
                     href="/profile"

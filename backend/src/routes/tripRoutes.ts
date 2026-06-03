@@ -85,7 +85,7 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
 
 /**
  * GET /api/trips/:tripId
- * Get trip details by ID with associated bookings
+ * Get trip details by ID
  */
 router.get('/:tripId', async (req: Request, res: Response) => {
   try {
@@ -98,17 +98,7 @@ router.get('/:tripId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
-    // Fetch associated bookings for this trip
-    const bookingsCollection = await getCollection(Collections.BOOKINGS);
-    const bookings = await bookingsCollection.find({ tripId }).toArray();
-
-    // Include bookings in the trip response
-    const tripWithBookings = {
-      ...trip,
-      bookings: bookings || []
-    };
-
-    res.json(tripWithBookings);
+    res.json(trip);
   } catch (error: any) {
     console.error('Error fetching trip:', error);
     res.status(500).json({ error: 'Failed to fetch trip', details: error.message });
@@ -192,6 +182,24 @@ router.post('/:tripId/places', async (req: Request, res: Response) => {
     const placeId = uuidv4();
     const now = new Date().toISOString();
 
+    // Geographically resolve coordinates from master seed places if 0 or missing
+    let lat = placeData.latitude || 0;
+    let lng = placeData.longitude || 0;
+
+    if (lat === 0 || lng === 0) {
+      const masterPlacesColl = await getCollection(Collections.PLACES);
+      const masterPlace = await masterPlacesColl.findOne({
+        name: { $regex: new RegExp(`^${placeData.name.trim()}$`, 'i') },
+        tripId: { $exists: false }
+      });
+
+      if (masterPlace) {
+        lat = masterPlace.lat || masterPlace.latitude || 0;
+        lng = masterPlace.lng || masterPlace.longitude || 0;
+        console.log(`🗺️ Backend Coordinate Resolver: Auto-resolved "${placeData.name}" to lat=${lat}, lng=${lng}`);
+      }
+    }
+
     const place: Place = {
       placeId,
       tripId,
@@ -200,12 +208,13 @@ router.post('/:tripId/places', async (req: Request, res: Response) => {
       district: placeData.district,
       city: placeData.city,
       address: placeData.address,
-      latitude: placeData.latitude,
-      longitude: placeData.longitude,
+      latitude: lat,
+      longitude: lng,
       visitDate: placeData.visitDate,
       visitTime: placeData.visitTime,
       duration: placeData.duration,
       notes: placeData.notes,
+      visitStatus: 'PLANNED',
       createdAt: now,
       updatedAt: now,
     };
@@ -262,6 +271,48 @@ router.get('/:tripId/places', async (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /api/trips/:tripId/places/:placeId
+ * Update a place's status or notes
+ */
+router.patch('/:tripId/places/:placeId', async (req: Request, res: Response) => {
+  try {
+    const { tripId, placeId } = req.params;
+    const { visitStatus, visitDate, visitTime, notes } = req.body;
+
+    const placesCollection = await getCollection(Collections.PLACES);
+    const place = await placesCollection.findOne({ placeId, tripId });
+
+    if (!place) {
+      return res.status(404).json({ error: 'Place not found in this trip' });
+    }
+
+    const updateData: any = {
+      updatedAt: new Date().toISOString()
+    };
+
+    if (visitStatus !== undefined) updateData.visitStatus = visitStatus;
+    if (visitDate !== undefined) updateData.visitDate = visitDate;
+    if (visitTime !== undefined) updateData.visitTime = visitTime;
+    if (notes !== undefined) updateData.notes = notes;
+
+    await placesCollection.updateOne(
+      { placeId, tripId },
+      { $set: updateData }
+    );
+
+    const updatedPlace = await placesCollection.findOne({ placeId, tripId });
+
+    res.json({
+      message: 'Place updated successfully',
+      place: updatedPlace
+    });
+  } catch (error: any) {
+    console.error('Error updating place:', error);
+    res.status(500).json({ error: 'Failed to update place', details: error.message });
+  }
+});
+
+/**
  * DELETE /api/trips/:tripId/places/:placeId
  * Remove a place from a trip
  */
@@ -289,6 +340,32 @@ router.delete('/:tripId/places/:placeId', async (req: Request, res: Response) =>
   } catch (error: any) {
     console.error('Error removing place:', error);
     res.status(500).json({ error: 'Failed to remove place', details: error.message });
+  }
+});
+
+/**
+ * DELETE /api/trips/:tripId/places
+ * Remove all places from a trip
+ */
+router.delete('/:tripId/places', async (req: Request, res: Response) => {
+  try {
+    const { tripId } = req.params;
+
+    // Delete all places for this trip from Places collection
+    const placesCollection = await getCollection(Collections.PLACES);
+    await placesCollection.deleteMany({ tripId });
+
+    // Update trip's places array to be empty
+    const tripsCollection = await getCollection(Collections.TRIPS);
+    await tripsCollection.updateOne(
+      { tripId },
+      { $set: { places: [], updatedAt: new Date().toISOString() } }
+    );
+
+    res.json({ message: 'All places removed successfully from trip' });
+  } catch (error: any) {
+    console.error('Error removing all places:', error);
+    res.status(500).json({ error: 'Failed to remove all places', details: error.message });
   }
 });
 

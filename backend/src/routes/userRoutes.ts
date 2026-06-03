@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getCollection, Collections } from '../config/mongodb';
 import { User, CreateUserDTO, UpdateUserDTO, SafeUser } from '../models/userModel';
-import { createAvatarUploadUrl } from '../services/s3Service';
 
 const router = express.Router();
 
@@ -198,30 +197,6 @@ router.put('/:userId', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user', details: error.message });
-  }
-});
-
-/**
- * POST /api/users/:userId/avatar-upload-url
- * Generate presigned URL for avatar upload
- */
-router.post('/:userId/avatar-upload-url', async (req: Request, res: Response) => {
-  try {
-    const { filename, contentType } = req.body;
-
-    if (!filename) {
-      return res.status(400).json({ error: 'Filename is required' });
-    }
-
-    const uploadData = await createAvatarUploadUrl(
-      filename,
-      contentType || 'image/jpeg'
-    );
-
-    res.json(uploadData);
-  } catch (error: any) {
-    console.error('Error generating upload URL:', error);
-    res.status(500).json({ error: 'Failed to generate upload URL', details: error.message });
   }
 });
 

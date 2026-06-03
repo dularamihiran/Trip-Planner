@@ -45,12 +45,6 @@ export default function DashboardNavbar() {
               <span>Dashboard</span>
             </Link>
             <Link 
-              href="/hotels" 
-              className="text-gray-600 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-            >
-              Hotels
-            </Link>
-            <Link 
               href="/profile" 
               className="text-gray-600 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
             >
@@ -102,13 +96,6 @@ export default function DashboardNavbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 <span>Dashboard</span>
-              </Link>
-              <Link
-                href="/hotels"
-                className="block text-gray-600 hover:text-emerald-600 px-3 py-2 rounded-md text-base font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Hotels
               </Link>
               <Link
                 href="/profile"

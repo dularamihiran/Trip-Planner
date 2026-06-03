@@ -1,14 +1,12 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { initializeDynamoDB } from './config/database';
 import { initializeMongoDB } from './config/mongodb';
 
 // Import routes
 import userRoutes from './routes/userRoutes';
 import tripRoutes from './routes/tripRoutes';
 import adminRoutes from './routes/adminRoutes';
-import hotelRoutes from './routes/hotelRoutes';
 
 dotenv.config();
 
@@ -24,12 +22,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database connection
-Promise.all([
-  initializeDynamoDB(),
-  initializeMongoDB()
-])
+initializeMongoDB()
   .then(() => {
-    console.log('✅ DynamoDB initialized successfully');
     console.log('✅ MongoDB initialized successfully');
   })
   .catch((error) => {
@@ -41,8 +35,8 @@ Promise.all([
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ 
     status: 'OK', 
-    message: 'Trip Planner API is running with DynamoDB',
-    database: 'DynamoDB',
+    message: 'Trip Planner API is running',
+    database: 'MongoDB',
     timestamp: new Date().toISOString()
   });
 });
@@ -51,7 +45,6 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/users', userRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/hotels', hotelRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

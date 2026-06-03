@@ -10,16 +10,6 @@ export interface Place {
   visitStatus?: 'PLANNED' | 'DONE';
 }
 
-export interface Booking {
-  bookingId: string;
-  hotelName: string;
-  district: string;
-  checkIn: string;
-  checkOut: string;
-  status: "CONFIRMED" | "CANCELLED";
-  price: number;
-}
-
 export interface Trip {
   tripId: string;
   tripName: string;
@@ -27,7 +17,6 @@ export interface Trip {
   endDate: string;
   districts: string[];
   places?: Place[];
-  bookings?: Booking[];
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED";
 }
 

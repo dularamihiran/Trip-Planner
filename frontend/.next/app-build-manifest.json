@@ -32,20 +32,37 @@
       "static/css/app/path/page.css",
       "static/chunks/app/path/page.js"
     ],
-    "/hotels/page": [
+    "/trips/[tripId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/hotels/page.js"
+      "static/css/app/trips/[tripId]/page.css",
+      "static/chunks/app/trips/[tripId]/page.js"
+    ],
+    "/trips/[tripId]/ai-itinerary/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/trips/[tripId]/ai-itinerary/page.css",
+      "static/chunks/app/trips/[tripId]/ai-itinerary/page.js"
+    ],
+    "/assistant/[tripId]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/assistant/[tripId]/page.js"
+    ],
+    "/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/page.js"
+    ],
+    "/register/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/register/page.js"
     ],
     "/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/profile/page.js"
-    ],
-    "/trips/[tripId]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/trips/[tripId]/page.js"
     ]
   }
 }

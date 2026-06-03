@@ -38,10 +38,8 @@ export default function LoginPage() {
         // Redirect based on user role
         if (response.user.role === 'ADMIN') {
           window.location.href = '/admin';
-        } else if (response.user.role === 'HOTEL_OWNER') {
-          window.location.href = '/hotel-dashboard'; // Hotel owners manage their hotels
         } else {
-          window.location.href = '/dashboard'; // Regular users plan trips
+          window.location.href = '/dashboard';
         }
       } else {
         setError(response.error || 'Login failed. Please check your credentials.');

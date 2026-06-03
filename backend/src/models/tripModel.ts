@@ -1,5 +1,3 @@
-import { Booking } from './bookingModel';
-
 /**
  * Trip Model
  * Represents a planned trip itinerary
@@ -12,7 +10,6 @@ export interface Trip {
   endDate: string; // ISO date string
   districts: string[]; // Sri Lankan districts to visit
   places: string[]; // Array of place IDs
-  bookings?: Booking[]; // Associated hotel bookings (populated when fetching full trip details)
   budget?: number; // Total budget in LKR
   status: 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   description?: string;
@@ -28,7 +25,7 @@ export interface Place {
   placeId: string; // Partition Key (PK) - UUID
   tripId: string; // Reference to parent trip (GSI)
   name: string;
-  category: string; // e.g., 'Temple', 'Beach', 'Restaurant', 'Hotel'
+  category: string; // e.g., 'Temple', 'Beach', 'Restaurant'
   district: string;
   city?: string;
   address?: string;
@@ -39,6 +36,7 @@ export interface Place {
   duration?: number; // Planned duration in hours
   notes?: string;
   imageUrl?: string;
+  visitStatus?: 'PLANNED' | 'DONE'; // Completion status of this place
   createdAt: string;
   updatedAt: string;
 }
