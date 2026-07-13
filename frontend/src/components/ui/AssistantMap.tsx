@@ -42,7 +42,7 @@ export default function AssistantMap({
     // Create demo map container
     const demoMap = document.createElement('div');
     demoMap.className = 'w-full h-full bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 relative overflow-hidden';
-    
+
     // Add demo map content
     demoMap.innerHTML = `
       <div class="absolute inset-0 opacity-20">
@@ -110,7 +110,7 @@ export default function AssistantMap({
   const initializeGoogleMap = () => {
     // Check if Google Maps is loaded
     if (typeof window !== 'undefined' && (window as any).google && (window as any).google.maps) {
-      const defaultCenter = userLocation 
+      const defaultCenter = userLocation
         ? { lat: userLocation.latitude, lng: userLocation.longitude }
         : { lat: 7.8731, lng: 80.7718 }; // Center of Sri Lanka
 
@@ -168,7 +168,7 @@ export default function AssistantMap({
     allPlaces.forEach((place, index) => {
       const isCompleted = completedPlaces.includes(place.placeId);
       const isCurrent = currentPlace?.placeId === place.placeId;
-      
+
       let markerColor = '#6B7280'; // Gray for upcoming
       if (isCompleted) markerColor = '#10B981'; // Green for completed
       if (isCurrent) markerColor = '#F59E0B'; // Yellow for current
@@ -233,6 +233,34 @@ export default function AssistantMap({
     const initializeMap = () => {
       if (isDemoMode) {
         initializeDemoMap();
+        return;
+      }
+
+      // If not demo mode, load script if not loaded
+      if (typeof window !== 'undefined' && !(window as any).google) {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+          initializeDemoMap();
+          return;
+        }
+
+        // Check if script is already added to head
+        const existingScript = document.getElementById('google-maps-script');
+        if (!existingScript) {
+          const script = document.createElement('script');
+          script.id = 'google-maps-script';
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+            initializeGoogleMap();
+          };
+          script.onerror = () => {
+            console.warn('Google Maps failed to load. Using mock map.');
+            initializeDemoMap();
+          };
+          document.head.appendChild(script);
+        }
       } else {
         initializeGoogleMap();
       }

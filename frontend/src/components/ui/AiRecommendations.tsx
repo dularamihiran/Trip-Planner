@@ -95,7 +95,7 @@ export default function AiRecommendations({
 
   // Trigger recommendation load on mount or filters change
   useEffect(() => {
-    if (districts && districts.length > 0 && interests && interests.length > 0) {
+    if (districts && districts.length > 0) {
       fetchAiPlan();
     }
   }, [districts, interests, budget, days]);

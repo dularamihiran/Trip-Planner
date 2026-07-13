@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { tripApi } from '@/utils/api';
+import StartingPointModal from '@/components/ui/StartingPointModal';
 
 export default function TripPlannerPage() {
   const [tripData, setTripData] = useState({
@@ -13,8 +14,13 @@ export default function TripPlannerPage() {
     districts: [] as string[],
     budget: '100000-200000',
     interests: [] as string[],
-    startPoint: ''
+    startPoint: '',
+    startPointLat: 6.9271, // default Colombo
+    startPointLng: 79.8612
   });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +64,15 @@ export default function TripPlannerPage() {
     'Kilinochchi'
   ];
 
+  const handleStartingPointSelect = (address: string, lat: number, lng: number) => {
+    setTripData(prev => ({
+      ...prev,
+      startPoint: address,
+      startPointLat: lat,
+      startPointLng: lng
+    }));
+  };
+
   const handleInterestToggle = (interest: string) => {
     setTripData(prev => ({
       ...prev,
@@ -85,15 +100,10 @@ export default function TripPlannerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!tripData.name || !tripData.startDate || !tripData.endDate || tripData.districts.length === 0 || !tripData.startPoint) {
       setError('Please fill in all required fields: Trip Name, Starting Location, Dates, and at least one District');
-      return;
-    }
-
-    if (tripData.interests.length === 0) {
-      setError('Please select at least one interest');
       return;
     }
 
@@ -112,13 +122,13 @@ export default function TripPlannerPage() {
       });
 
       console.log('Suggested places:', response);
-      
+
       if (response.places && response.places.length > 0) {
         // Store trip data and suggestions in localStorage for the path page
         localStorage.setItem('tripData', JSON.stringify(tripData));
         localStorage.setItem('suggestedPlaces', JSON.stringify(response.places));
         localStorage.setItem('suggestionsSummary', JSON.stringify(response.summary));
-        
+
         // Navigate to path page
         window.location.href = '/path';
       } else {
@@ -180,15 +190,24 @@ export default function TripPlannerPage() {
                 <label htmlFor="startPoint" className="block text-sm font-medium text-gray-700 mb-2">
                   Trip Starting Location
                 </label>
-                <input
-                  type="text"
-                  id="startPoint"
-                  value={tripData.startPoint}
-                  onChange={(e) => setTripData(prev => ({ ...prev, startPoint: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="e.g., Bandaranaike International Airport (CMB) or Colombo Fort"
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="startPoint"
+                    value={tripData.startPoint}
+                    onChange={(e) => setTripData(prev => ({ ...prev, startPoint: e.target.value }))}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="e.g., Bandaranaike International Airport (CMB)"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-950 text-white rounded-lg font-bold text-sm flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                  >
+                    <span>🗺️ Choose on Map</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -225,7 +244,7 @@ export default function TripPlannerPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select District(s) to Visit
               </label>
-              
+
               {/* Selected Districts Tags */}
               {tripData.districts.length > 0 && (
                 <div className="mb-3">
@@ -311,11 +330,10 @@ export default function TripPlannerPage() {
                     key={interest}
                     type="button"
                     onClick={() => handleInterestToggle(interest)}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors duration-200 ${
-                      tripData.interests.includes(interest)
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors duration-200 ${tripData.interests.includes(interest)
                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
-                    }`}
+                      }`}
                   >
                     {interest}
                   </button>
@@ -371,6 +389,13 @@ export default function TripPlannerPage() {
           </div>
         </div>
       </main>
+
+      <StartingPointModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleStartingPointSelect}
+        apiKey={apiKey}
+      />
     </div>
   );
 }
