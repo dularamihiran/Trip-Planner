@@ -37,7 +37,7 @@ export interface RecommendationResponse {
 }
 
 // Normalized mapping from front-end interest selections to DB categories
-const INTEREST_TO_CATEGORIES_MAP: Record<string, string[]> = {
+export const INTEREST_TO_CATEGORIES_MAP: Record<string, string[]> = {
   'Historical Sites': ['Historical Sites'],
   'Beaches': ['Beaches'],
   'Wildlife': ['Wildlife'],

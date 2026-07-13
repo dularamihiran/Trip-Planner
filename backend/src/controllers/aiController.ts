@@ -16,10 +16,10 @@ export const recommendTripHandler = async (req: Request, res: Response) => {
       });
     }
 
-    if (!interests || !Array.isArray(interests) || interests.length === 0) {
+    if (interests !== undefined && !Array.isArray(interests)) {
       return res.status(400).json({
         error: 'Validation Error',
-        message: 'interests is required and must be a non-empty array of strings',
+        message: 'interests must be an array of strings',
       });
     }
 
@@ -40,7 +40,7 @@ export const recommendTripHandler = async (req: Request, res: Response) => {
 
     const recommendationParams: RecommendationRequest = {
       districts,
-      interests,
+      interests: interests || [],
       budget,
       days: travelDays,
     };

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import PlaceList from '@/components/ui/PlaceList';
-import FreeMapComponent from '@/components/ui/FreeMapComponent';
+import GoogleMapComponent from '@/components/ui/GoogleMapComponent';
 import SearchBar from '@/components/ui/SearchBar';
 import AiRecommendations from '@/components/ui/AiRecommendations';
 
@@ -106,9 +106,9 @@ export default function PathCreationPage() {
           // 1. Fetch trip details from backend database
           const response = await fetch(`http://localhost:5000/api/trips/${tripIdParam}`);
           if (!response.ok) throw new Error('Trip not found in database');
-          
+
           const tripData = await response.json();
-          
+
           // Parse starting point from description if available
           let startPoint = '';
           if (tripData.description && tripData.description.includes('Starting location:')) {
@@ -123,10 +123,17 @@ export default function PathCreationPage() {
             startDate: tripData.startDate.split('T')[0],
             endDate: tripData.endDate.split('T')[0],
             budget: tripData.budget || 250000,
-            startPoint: startPoint || 'Colombo',
+            startPoint: tripData.startPoint || startPoint || 'Colombo',
+            startPointLat: tripData.startPointLat,
+            startPointLng: tripData.startPointLng,
             districts: tripData.districts || []
           };
           setTripInfo(info);
+
+          // Center the map at the user's starting point coordinates
+          if (tripData.startPointLat && tripData.startPointLng) {
+            setMapCenter({ lat: tripData.startPointLat, lng: tripData.startPointLng });
+          }
 
           // Calculate number of days
           if (tripData.startDate && tripData.endDate) {
@@ -145,11 +152,11 @@ export default function PathCreationPage() {
           if (placesResponse.ok) {
             const placesData = await placesResponse.json();
             const apiPlaces = placesData.places || [];
-            
+
             // Transform detailed places and filter out duplicates by name
             const uniquePlaces: any[] = [];
             const seenNames = new Set<string>();
-            
+
             for (const place of apiPlaces) {
               const nameLower = place.name.toLowerCase().trim();
               if (!seenNames.has(nameLower)) {
@@ -189,11 +196,11 @@ export default function PathCreationPage() {
                   travelers: 1
                 })
               });
-              
+
               if (suggestions.ok) {
                 const suggData = await suggestions.json();
                 const suggPlaces = suggData.places || [];
-                
+
                 // De-duplicate suggested attractions by name
                 const uniqueSugg: any[] = [];
                 const seenSuggNames = new Set<string>();
@@ -249,7 +256,7 @@ export default function PathCreationPage() {
         if (storedPlaces) {
           try {
             const apiPlaces = JSON.parse(storedPlaces);
-            
+
             // Transform API place format to our Place interface
             const transformedPlaces: Place[] = apiPlaces.map((place: any) => ({
               id: place.placeId,
@@ -262,9 +269,9 @@ export default function PathCreationPage() {
               isSelected: false,
               estimatedCost: place.estimatedCost
             }));
-            
+
             setSuggestedPlaces(transformedPlaces);
-            
+
             // Set map center to first place with valid coordinates
             const firstValidPlace = transformedPlaces.find(p => p.lat != null && p.lng != null);
             if (firstValidPlace) {
@@ -282,7 +289,12 @@ export default function PathCreationPage() {
           try {
             const parsed = JSON.parse(storedTripData);
             setTripInfo(parsed);
-            
+
+            // Center the map at the user's starting point coordinates
+            if (parsed.startPointLat && parsed.startPointLng) {
+              setMapCenter({ lat: parsed.startPointLat, lng: parsed.startPointLng });
+            }
+
             // Calculate number of days
             if (parsed.startDate && parsed.endDate) {
               const start = new Date(parsed.startDate);
@@ -311,7 +323,7 @@ export default function PathCreationPage() {
       for (let i = 0; i < selectedPlaces.length - 1; i++) {
         const place1 = selectedPlaces[i];
         const place2 = selectedPlaces[i + 1];
-        
+
         // Haversine formula for great-circle distance
         const R = 6371; // Earth's radius in km
         const dLat = (place2.lat - place1.lat) * Math.PI / 180;
@@ -324,9 +336,9 @@ export default function PathCreationPage() {
         const segmentDistance = R * c;
         distance += segmentDistance;
       }
-      
+
       setTotalDistance(Math.round(distance));
-      
+
       // Estimate driving time (assuming average 40km/h for Sri Lankan roads)
       const hours = Math.floor(distance / 40);
       const minutes = Math.round((distance % 40) * 1.5);
@@ -349,7 +361,7 @@ export default function PathCreationPage() {
 
     // Add to selected places
     setSelectedPlaces(prev => [...prev, { ...place, isSelected: true }]);
-    
+
     // Update suggested places to mark as selected by name
     setSuggestedPlaces(prev =>
       prev.map(p => p.name.toLowerCase().trim() === place.name.toLowerCase().trim() ? { ...p, isSelected: true } : p)
@@ -363,7 +375,7 @@ export default function PathCreationPage() {
 
     // Remove from selected places
     setSelectedPlaces(prev => prev.filter(p => p.id !== placeId));
-    
+
     // Update suggested places to mark as not selected by name
     setSuggestedPlaces(prev =>
       prev.map(p => p.name.toLowerCase().trim() === placeToRemove.name.toLowerCase().trim() ? { ...p, isSelected: false } : p)
@@ -372,13 +384,13 @@ export default function PathCreationPage() {
 
   const handleApplyItinerary = (itineraryPlaces: Place[]) => {
     setSelectedPlaces(itineraryPlaces.map(p => ({ ...p, isSelected: true })));
-    
+
     // Also update suggestedPlaces selected state by name
     const selectedNames = new Set(itineraryPlaces.map(p => p.name.toLowerCase().trim()));
     setSuggestedPlaces(prev =>
       prev.map(p => ({ ...p, isSelected: selectedNames.has(p.name.toLowerCase().trim()) }))
     );
-    
+
     alert('🎉 AI Suggested Itinerary applied successfully! You can now reorder, add, or remove places using the standard controls.');
   };
 
@@ -415,7 +427,7 @@ export default function PathCreationPage() {
       }
 
       const user = JSON.parse(userStr);
-      
+
       let tripId = '';
       const params = new URLSearchParams(window.location.search);
       const tripIdParam = params.get('tripId');
@@ -423,7 +435,7 @@ export default function PathCreationPage() {
 
       if (isEditing) {
         tripId = tripIdParam;
-        
+
         // 1. Update trip details in database
         const updateResponse = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
           method: 'PUT',
@@ -434,7 +446,10 @@ export default function PathCreationPage() {
             endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
             districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
             budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
-            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`
+            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`,
+            startPoint: tripInfo?.startPoint,
+            startPointLat: tripInfo?.startPointLat,
+            startPointLng: tripInfo?.startPointLng,
           }),
         });
 
@@ -462,19 +477,22 @@ export default function PathCreationPage() {
             endDate: tripInfo?.endDate || new Date().toISOString().split('T')[0],
             districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
             budget: tripInfo?.budget ? parseInt(tripInfo.budget) : undefined,
-            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`
+            description: `Starting location: ${tripInfo?.startPoint || 'Not Specified'}. Trip with ${selectedPlaces.length} places, ${totalDistance} km total distance.`,
+            startPoint: tripInfo?.startPoint,
+            startPointLat: tripInfo?.startPointLat,
+            startPointLng: tripInfo?.startPointLng,
           }),
         });
 
         const tripData = await tripResponse.json();
-        
+
         if (!tripData.trip) {
           throw new Error(tripData.error || 'Failed to create trip');
         }
 
         tripId = tripData.trip.tripId;
       }
-      
+
       // 3. Add all selected places to the trip
       for (const place of selectedPlaces) {
         await fetch(`http://localhost:5000/api/trips/${tripId}/places`, {
@@ -522,7 +540,7 @@ export default function PathCreationPage() {
       } catch (optimizeError) {
         console.error('Error generating AI itinerary:', optimizeError);
       }
-      
+
       // 5. Save trip plan data to localStorage
       const tripPlan = {
         tripId,
@@ -532,7 +550,7 @@ export default function PathCreationPage() {
         districts: Array.from(new Set(selectedPlaces.map(p => p.address))),
         savedAt: new Date().toISOString()
       };
-      
+
       localStorage.setItem('savedTripPlan', JSON.stringify(tripPlan));
 
       if (isEditing) {
@@ -558,7 +576,7 @@ export default function PathCreationPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -595,10 +613,13 @@ export default function PathCreationPage() {
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Map View</h3>
-              <FreeMapComponent
+              <GoogleMapComponent
                 places={selectedPlaces}
                 center={mapCenter}
                 onPlaceSelect={handleAddToPath}
+                startPoint={tripInfo?.startPoint}
+                startPointLat={tripInfo?.startPointLat}
+                startPointLng={tripInfo?.startPointLng}
               />
             </div>
           </div>
@@ -612,7 +633,7 @@ export default function PathCreationPage() {
         {/* Trip Summary */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Trip Summary</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-emerald-600">{selectedPlaces.length}</div>

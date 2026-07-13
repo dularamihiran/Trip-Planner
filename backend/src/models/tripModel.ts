@@ -13,6 +13,9 @@ export interface Trip {
   budget?: number; // Total budget in LKR
   status: 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   description?: string;
+  startPoint?: string;
+  startPointLat?: number;
+  startPointLng?: number;
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }
@@ -52,6 +55,9 @@ export interface CreateTripDTO {
   districts?: string[];
   budget?: number;
   description?: string;
+  startPoint?: string;
+  startPointLat?: number;
+  startPointLng?: number;
 }
 
 /**
@@ -66,6 +72,9 @@ export interface UpdateTripDTO {
   budget?: number;
   status?: 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   description?: string;
+  startPoint?: string;
+  startPointLat?: number;
+  startPointLng?: number;
 }
 
 /**

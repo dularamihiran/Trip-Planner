@@ -1,5 +1,9 @@
 import { MongoClient, Db } from 'mongodb';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Override default DNS servers with public DNS (Google & Cloudflare) to resolve Atlas clusters when local ISPs fail.
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 
 dotenv.config();
 
@@ -28,7 +32,7 @@ export const initializeMongoDB = async (): Promise<void> => {
       });
       clientPromise = client.connect();
     }
-    
+
     await clientPromise;
     console.log('✅ MongoDB connected successfully');
     console.log(`📍 Database: ${dbName}`);

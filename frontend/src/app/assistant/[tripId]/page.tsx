@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import AssistantMap from '@/components/ui/AssistantMapSimple';
+import AssistantMap from '@/components/ui/AssistantMap';
 import ProgressPanel from '@/components/ui/ProgressPanel';
 import AssistantToolbar from '@/components/ui/AssistantToolbar';
 import { Trip, Place } from '@/types/trip';
@@ -22,22 +22,30 @@ interface TripProgress {
 export default function TripAssistantPage() {
   const params = useParams();
   const tripId = params.tripId as string;
-  
+
   // Core state
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Location and progress state
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [completedPlaces, setCompletedPlaces] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
+
   // Assistant state
   const [isDemoMode, setIsDemoMode] = useState(true); // Assume demo mode unless Google API key is detected
   const [locationWatchId, setLocationWatchId] = useState<number | null>(null);
+
+  // Check if Google Maps API key is available
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (apiKey && apiKey !== 'YOUR_API_KEY_HERE') {
+      setIsDemoMode(false);
+    }
+  }, []);
 
   // Fetch trip details
   useEffect(() => {
@@ -45,7 +53,7 @@ export default function TripAssistantPage() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // TODO: Replace with actual API call
         // const response = await fetch(`/api/trips/${tripId}`, {
         //   headers: {
@@ -58,26 +66,26 @@ export default function TripAssistantPage() {
         // }
         // 
         // const tripData = await response.json();
-        
+
         // For now, use mock data
         await new Promise(resolve => setTimeout(resolve, 500));
         const foundTrip = mockTrips.find(t => t.tripId === tripId);
-        
+
         if (!foundTrip) {
           throw new Error('Trip not found');
         }
-        
+
         setTrip(foundTrip);
-        
+
         // Initialize progress from trip data or fetch from API
         // TODO: Fetch actual progress from API
         // const progressResponse = await fetch(`/api/trips/${tripId}/progress`);
         // const progressData = await progressResponse.json();
-        
+
         // For now, start at beginning
         setCurrentStopIndex(0);
         setCompletedPlaces([]);
-        
+
       } catch (err) {
         console.error('Error fetching trip details:', err);
         setError(err instanceof Error ? err.message : 'Failed to load trip details');
@@ -136,7 +144,7 @@ export default function TripAssistantPage() {
       ...options,
       timeout: 15000
     });
-    
+
     setLocationWatchId(watchId);
   }, []);
 
@@ -172,7 +180,7 @@ export default function TripAssistantPage() {
 
   // Handle marking current stop as done
   const handleMarkStopDone = async () => {
-    if (!trip || currentStopIndex >= trip.places.length) return;
+    if (!trip || !trip.places || currentStopIndex >= trip.places.length) return;
 
     const currentPlace = trip.places[currentStopIndex];
     const newCompletedPlaces = [...completedPlaces, currentPlace.placeId];
@@ -207,11 +215,11 @@ export default function TripAssistantPage() {
 
   // Handle skipping current stop
   const handleSkipStop = () => {
-    if (!trip || currentStopIndex >= trip.places.length) return;
-    
+    if (!trip || !trip.places || currentStopIndex >= trip.places.length) return;
+
     const newCurrentIndex = Math.min(currentStopIndex + 1, trip.places.length);
     setCurrentStopIndex(newCurrentIndex);
-    
+
     console.log(`Skipped stop. New index: ${newCurrentIndex}/${trip.places.length}`);
   };
 
@@ -227,12 +235,12 @@ export default function TripAssistantPage() {
 
   // Generate Google Maps link
   const getGoogleMapsLink = () => {
-    if (!userLocation || !trip || currentStopIndex >= trip.places.length) return '#';
-    
+    if (!userLocation || !trip || !trip.places || currentStopIndex >= trip.places.length) return '#';
+
     const currentPlace = trip.places[currentStopIndex];
     const origin = `${userLocation.latitude},${userLocation.longitude}`;
     const destination = `${currentPlace.lat},${currentPlace.lng}`;
-    
+
     return `https://www.google.com/maps/dir/${origin}/${destination}`;
   };
 
@@ -277,15 +285,15 @@ export default function TripAssistantPage() {
     );
   }
 
-  const currentPlace = trip.places[currentStopIndex];
-  const isTripdCompleted = currentStopIndex >= trip.places.length;
+  const currentPlace = trip.places?.[currentStopIndex];
+  const isTripdCompleted = currentStopIndex >= (trip.places?.length || 0);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       {/* Demo Mode Banner */}
       {isDemoMode && (
         <div className="bg-yellow-600 text-yellow-100 px-4 py-2 text-center text-sm">
-          <span className="font-medium">Demo Mode:</span> Google Maps integration requires API key. 
+          <span className="font-medium">Demo Mode:</span> Google Maps integration requires API key.
           Using mock navigation for demonstration.
         </div>
       )}
@@ -319,12 +327,12 @@ export default function TripAssistantPage() {
                   </span>
                 )}
                 <span className="text-gray-400">
-                  Stop {Math.min(currentStopIndex + 1, trip.places.length)}/{trip.places.length}
+                  Stop {Math.min(currentStopIndex + 1, trip.places?.length || 0)}/{trip.places?.length || 0}
                 </span>
               </div>
             </div>
           </div>
-          
+
           {/* Network Status */}
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}></div>
@@ -342,7 +350,7 @@ export default function TripAssistantPage() {
           <AssistantMap
             userLocation={userLocation}
             currentPlace={currentPlace}
-            allPlaces={trip.places}
+            allPlaces={trip.places || []}
             completedPlaces={completedPlaces}
             isDemoMode={isDemoMode}
             locationError={locationError}
@@ -353,7 +361,7 @@ export default function TripAssistantPage() {
         {/* Progress Panel */}
         <div className="w-full lg:w-80 bg-gray-800 border-t lg:border-t-0 lg:border-l border-gray-700">
           <ProgressPanel
-            places={trip.places}
+            places={trip.places || []}
             currentStopIndex={currentStopIndex}
             completedPlaces={completedPlaces}
             onMarkDone={handleMarkStopDone}

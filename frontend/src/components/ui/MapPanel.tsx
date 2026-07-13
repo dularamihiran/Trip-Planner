@@ -2,47 +2,68 @@
 
 import { Place } from '@/types/trip';
 import { useState } from 'react';
-import FreeMapComponent from './FreeMapComponent';
+import GoogleMapComponent from './GoogleMapComponent';
 
 interface MapPanelProps {
   places: Place[];
   tripName: string;
+  startPoint?: string;
+  startPointLat?: number;
+  startPointLng?: number;
 }
 
-const MapPanel: React.FC<MapPanelProps> = ({ places, tripName }) => {
+const MapPanel: React.FC<MapPanelProps> = ({ places, tripName, startPoint, startPointLat, startPointLng }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Filter out places that are already completed (visitStatus === 'DONE')
   const remainingPlaces = places.filter(p => p.visitStatus !== 'DONE');
 
-  // Map remaining places to the format expected by FreeMapComponent
-  const mappedPlacesForMap = remainingPlaces.map((p) => ({
-    id: p.placeId,
-    name: p.name,
-    category: p.category,
-    address: p.district,
-    lat: p.lat || (p as any).latitude || 0,
-    lng: p.lng || (p as any).longitude || 0,
-    description: (p as any).description || '',
+  const startPointPlace = startPoint && startPointLat && startPointLng ? [{
+    id: 'start-point',
+    name: `Start: ${startPoint}`,
+    category: 'Start',
+    address: startPoint,
+    lat: typeof startPointLat === 'string' ? parseFloat(startPointLat) : startPointLat,
+    lng: typeof startPointLng === 'string' ? parseFloat(startPointLng) : startPointLng,
+    description: 'Trip Starting Location',
     isSelected: true,
-  }));
+  }] : [];
 
-  // Calculate mock distance and time based on remaining places
+  // Map remaining places to the format expected by GoogleMapComponent
+  const mappedPlacesForMap = [
+    ...startPointPlace,
+    ...remainingPlaces.map((p) => {
+      const crudeLat = p.lat || (p as any).latitude || 0;
+      const crudeLng = p.lng || (p as any).longitude || 0;
+      return {
+        id: p.placeId,
+        name: p.name,
+        category: p.category,
+        address: p.district,
+        lat: typeof crudeLat === 'string' ? parseFloat(crudeLat) : crudeLat,
+        lng: typeof crudeLng === 'string' ? parseFloat(crudeLng) : crudeLng,
+        description: (p as any).description || '',
+        isSelected: true,
+      };
+    })
+  ];
+
+  // Calculate mock distance and time based on mapped route stops (including start point)
   const calculateTripStats = () => {
-    if (remainingPlaces.length < 2) {
+    if (mappedPlacesForMap.length < 2) {
       return { distance: '0 km', time: '0 min' };
     }
 
     const avgDistancePerLeg = 85; // Average km between places in Sri Lanka
     const avgSpeedKmh = 45; // Average speed including stops
-    
-    const totalDistance = (remainingPlaces.length - 1) * avgDistancePerLeg;
+
+    const totalDistance = (mappedPlacesForMap.length - 1) * avgDistancePerLeg;
     const totalTimeHours = totalDistance / avgSpeedKmh;
     const totalTimeMinutes = Math.round(totalTimeHours * 60);
 
     return {
       distance: `${totalDistance} km`,
-      time: totalTimeMinutes > 60 
+      time: totalTimeMinutes > 60
         ? `${Math.floor(totalTimeMinutes / 60)}h ${totalTimeMinutes % 60}m`
         : `${totalTimeMinutes}m`
     };
@@ -87,13 +108,16 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName }) => {
 
       {/* Real Interactive Map Container */}
       <div className={`relative ${isFullscreen ? 'h-96' : 'h-80'} bg-gray-100`}>
-        <FreeMapComponent
+        <GoogleMapComponent
           places={mappedPlacesForMap}
           center={
             mappedPlacesForMap.length > 0
               ? { lat: mappedPlacesForMap[0].lat, lng: mappedPlacesForMap[0].lng }
               : { lat: 7.8731, lng: 80.7718 } // Center of Sri Lanka
           }
+          startPoint={startPoint}
+          startPointLat={startPointLat}
+          startPointLng={startPointLng}
         />
       </div>
 
@@ -133,7 +157,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName }) => {
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Travel Duration</div>
           </div>
         </div>
-        
+
         {remainingPlaces.length > 1 && (
           <div className="mt-4 pt-3 border-t border-gray-100 text-center">
             <p className="text-[11px] text-gray-500 font-medium">

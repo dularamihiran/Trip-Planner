@@ -21,7 +21,7 @@ export default function TripDetailsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch trip main details
       const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
         method: 'GET',
@@ -29,16 +29,16 @@ export default function TripDetailsPage() {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('Trip not found');
         }
         throw new Error('Failed to fetch trip details');
       }
-      
+
       const tripData = await response.json();
-      
+
       // Fetch detailed places associated with this trip
       let fullPlaces: any[] = [];
       try {
@@ -48,7 +48,7 @@ export default function TripDetailsPage() {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (placesResponse.ok) {
           const placesData = await placesResponse.json();
           fullPlaces = placesData.places || [];
@@ -56,12 +56,22 @@ export default function TripDetailsPage() {
       } catch (placeErr) {
         console.error('Error fetching trip places:', placeErr);
       }
-      
+
+      // Parse starting location from description if not stored directly
+      let startPoint = tripData.startPoint;
+      if (!startPoint && tripData.description && tripData.description.includes('Starting location:')) {
+        const match = tripData.description.match(/Starting location:\s*([^.]+)/);
+        if (match && match[1]) {
+          startPoint = match[1].trim();
+        }
+      }
+
       const mergedTrip = {
         ...tripData,
+        startPoint: startPoint || 'Colombo Fort',
         places: fullPlaces
       };
-      
+
       setTrip(mergedTrip);
     } catch (err) {
       console.error('Error fetching trip details:', err);
@@ -84,7 +94,7 @@ export default function TripDetailsPage() {
     try {
       // Optimistic update
       setTrip(prev => prev ? { ...prev, status: newStatus } : null);
-      
+
       const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
         method: 'PUT',
         headers: {
@@ -92,11 +102,11 @@ export default function TripDetailsPage() {
         },
         body: JSON.stringify({ status: newStatus }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to update trip status');
       }
-      
+
       console.log(`Trip ${tripId} status updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating trip status:', error);
@@ -147,16 +157,16 @@ export default function TripDetailsPage() {
       // Optimistic update
       const updatedPlaces = trip.places.filter(place => place.placeId !== placeId);
       setTrip(prev => prev ? { ...prev, places: updatedPlaces } : null);
-      
+
       // Make actual DELETE API call
       const response = await fetch(`http://localhost:5000/api/trips/${trip.tripId}/places/${placeId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to remove place');
       }
-      
+
       console.log(`Removed place ${placeId} from trip`);
     } catch (error) {
       console.error('Error removing place:', error);
@@ -216,8 +226,8 @@ export default function TripDetailsPage() {
               {error || 'Trip Not Found'}
             </h3>
             <p className="text-gray-600 mb-6">
-              {error === 'Trip not found' 
-                ? "The trip you're looking for doesn't exist or has been removed." 
+              {error === 'Trip not found'
+                ? "The trip you're looking for doesn't exist or has been removed."
                 : 'There was an error loading the trip details. Please try again.'}
             </p>
             <div className="flex gap-3 justify-center">
@@ -251,7 +261,7 @@ export default function TripDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Navigation */}
         <div className="mb-6">
@@ -268,7 +278,7 @@ export default function TripDetailsPage() {
           {/* Left Column - Trip Summary */}
           <div className="lg:col-span-2 space-y-6">
             {/* Trip Header */}
-            <TripHeader 
+            <TripHeader
               trip={trip}
               onStatusChange={handleTripStatusChange}
               onDownloadPDF={handleDownloadPDF}
@@ -299,27 +309,27 @@ export default function TripDetailsPage() {
                 return (
                   <div className="bg-gradient-to-r from-blue-900 to-indigo-950 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden border border-blue-500/20 animate-fadeIn">
                     <div className="absolute right-4 bottom-0 opacity-10 text-7xl select-none">🚀</div>
-                    
+
                     <span className="bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                       Next Stop on Route
                     </span>
-                    
+
                     <h3 className="text-2xl font-extrabold mt-3 mb-1 text-white truncate">
                       {nextPlace.name}
                     </h3>
-                    
+
                     <p className="text-sm text-blue-100 flex items-center mb-4 font-semibold">
                       🏷️ {nextPlace.category} • 📍 {nextPlace.district}
                     </p>
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-blue-800/50 pt-4">
                       <div className="text-xs text-blue-200 font-medium">
-                        {plannedPlaces.length - 1 === 0 
-                          ? 'This is the final destination on your route!' 
+                        {plannedPlaces.length - 1 === 0
+                          ? 'This is the final destination on your route!'
                           : `Then ${plannedPlaces.length - 1} remaining destinations left on your trip path.`
                         }
                       </div>
-                      
+
                       <button
                         onClick={() => handlePlaceStatusChange(nextPlace.placeId, 'DONE')}
                         className="inline-flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:shadow-lg active:scale-95 transition-all duration-150"
@@ -354,7 +364,7 @@ export default function TripDetailsPage() {
                 >
                   🗺️ View Route Planning
                 </Link>
-                
+
                 <Link
                   href={`/trips/${trip.tripId}/ai-itinerary`}
                   className="inline-flex items-center justify-center bg-indigo-900 hover:bg-indigo-950 text-white px-6 py-3 rounded-xl font-bold shadow transition-colors duration-200"
@@ -367,9 +377,12 @@ export default function TripDetailsPage() {
 
           {/* Right Column - Map Panel */}
           <div className="lg:col-span-1">
-            <MapPanel 
+            <MapPanel
               places={trip.places || []}
               tripName={trip.tripName}
+              startPoint={trip.startPoint}
+              startPointLat={trip.startPointLat}
+              startPointLng={trip.startPointLng}
             />
           </div>
         </div>

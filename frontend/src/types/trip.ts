@@ -18,6 +18,9 @@ export interface Trip {
   districts: string[];
   places?: Place[];
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED";
+  startPoint?: string;
+  startPointLat?: number;
+  startPointLng?: number;
 }
 
 export type TripStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED";

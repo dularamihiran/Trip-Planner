@@ -6,31 +6,47 @@ import Link from 'next/link';
 import DashboardNavbar from '@/components/ui/DashboardNavbar';
 import ProfileCard from '@/components/ui/ProfileCard';
 import { User, UserProfile } from '@/types/user';
+import { Trip } from '@/types/trip';
+import { fetchUserTrips } from '@/utils/tripHelpers';
 
 export default function ProfilePage() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([]);
 
   // Load user profile on component mount
   useEffect(() => {
-    const loadUserProfile = () => {
+    const loadUserProfile = async () => {
       try {
         setLoading(true);
-        
+
         // Get user from localStorage
         const userStr = localStorage.getItem('user');
-        
+
         if (!userStr) {
           // Not logged in, redirect to login
           router.push('/login');
           return;
         }
-        
+
         const user = JSON.parse(userStr);
-        
-        // Create user profile from stored data
+
+        // Fetch user's trips from MongoDB
+        const tripsList = await fetchUserTrips();
+        setTrips(tripsList);
+
+        // Find favorite destination from trips
+        const districtsList = tripsList.flatMap((t: Trip) => t.districts || []);
+        let favorite = user.favoriteDistrict || user.favoriteDestination || 'Colombo';
+        if (districtsList.length > 0) {
+          const counts: Record<string, number> = {};
+          districtsList.forEach((d: string) => { counts[d] = (counts[d] || 0) + 1; });
+          favorite = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+        }
+
+        // Create user profile from stored user info + real trip stats
         const profile: UserProfile = {
           user: {
             userId: user.userId || user.id,
@@ -43,13 +59,13 @@ export default function ProfilePage() {
             createdAt: user.createdAt || new Date().toISOString()
           },
           stats: {
-            totalTrips: user.totalTrips || 0,
-            placesVisited: user.placesVisited || 0,
-            favoriteDestination: user.favoriteDistrict || user.favoriteDestination || 'Colombo',
-            completedTrips: user.completedTrips || 0
+            totalTrips: tripsList.length,
+            placesVisited: tripsList.reduce((sum: number, t: Trip) => sum + (t.places?.length || 0), 0),
+            favoriteDestination: favorite,
+            completedTrips: tripsList.filter((t: Trip) => t.status === 'COMPLETED').length
           }
         };
-        
+
         setUserProfile(profile);
         setError(null);
       } catch (err) {
@@ -70,13 +86,13 @@ export default function ProfilePage() {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const newUser = { ...currentUser, ...updatedUser };
       localStorage.setItem('user', JSON.stringify(newUser));
-      
+
       // Update local state
-      setUserProfile(prev => prev ? { ...prev, user: updatedUser } : null);
-      
+      setUserProfile((prev: UserProfile | null) => prev ? { ...prev, user: updatedUser } : null);
+
       // TODO: Also update in backend
       // await userApi.updateProfile(updatedUser);
-      
+
       alert('✅ Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -87,7 +103,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar />
-      
+
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
@@ -102,7 +118,7 @@ export default function ProfilePage() {
               Back to Dashboard
             </Link>
           </div>
-          
+
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h1>
             <p className="text-gray-600">
@@ -154,10 +170,65 @@ export default function ProfilePage() {
 
         {/* Profile Content */}
         {!loading && !error && userProfile && (
-          <ProfileCard
-            userProfile={userProfile}
-            onProfileUpdate={handleProfileUpdate}
-          />
+          <>
+            <ProfileCard
+              userProfile={userProfile}
+              onProfileUpdate={handleProfileUpdate}
+            />
+
+            {/* Trip List Summary */}
+            {trips.length > 0 ? (
+              <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <span className="mr-2.5">✈️</span>
+                  Your Real-Time Trips
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {trips.map((trip) => (
+                    <div key={trip.tripId} className="border border-gray-200 hover:border-emerald-300 rounded-xl p-5 hover:shadow-md transition-all duration-200 bg-slate-50 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${trip.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                            (trip.status as string) === 'ACTIVE' || (trip.status as string) === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                              (trip.status as string) === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }`}>
+                            {trip.status}
+                          </span>
+                          <p className="text-xs text-gray-500 font-medium">
+                            {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(trip.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <h4 className="font-extrabold text-slate-800 text-base leading-snug">{trip.tripName}</h4>
+                        <p className="text-xs text-slate-650 mt-1.5 line-clamp-2">
+                          <span className="font-semibold text-slate-500">Districts:</span> {trip.districts.join(', ')}
+                        </p>
+                      </div>
+                      <div className="mt-5 pt-3 border-t border-gray-250/20 flex items-center justify-between">
+                        <span className="text-xs text-gray-500 font-bold">{trip.places?.length || 0} stops planned</span>
+                        <Link
+                          href={`/trips/${trip.tripId}`}
+                          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
+                        >
+                          View Details →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                <p className="text-sm text-gray-500 mb-4">You have not created any trips yet.</p>
+                <Link
+                  href="/trip"
+                  className="inline-flex items-center bg-emerald-605 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm"
+                >
+                  Create Your First Trip
+                </Link>
+              </div>
+            )}
+          </>
         )}
 
         {/* Additional Actions */}
@@ -174,7 +245,7 @@ export default function ProfilePage() {
                 </svg>
                 View My Trips
               </Link>
-              
+
               <button
                 onClick={() => alert('Account settings functionality will be implemented with backend')}
                 className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200"

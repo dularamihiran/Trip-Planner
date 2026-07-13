@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getCollection, Collections } from '../config/mongodb';
 import { Trip, CreateTripDTO, UpdateTripDTO, Place, AddPlaceDTO } from '../models/tripModel';
+import { INTEREST_TO_CATEGORIES_MAP } from '../services/aiService';
 
 const router = express.Router();
 
@@ -35,6 +36,9 @@ router.post('/', async (req: Request, res: Response) => {
       budget: tripData.budget,
       status: 'PLANNING',
       description: tripData.description,
+      startPoint: tripData.startPoint,
+      startPointLat: tripData.startPointLat,
+      startPointLng: tripData.startPointLng,
       createdAt: now,
       updatedAt: now,
     };
@@ -64,7 +68,7 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     const { status } = req.query;
 
     const tripsCollection = await getCollection(Collections.TRIPS);
-    
+
     // Build query filter
     const filter: any = { userId };
     if (status) {
@@ -386,15 +390,15 @@ router.post('/suggest-places', async (req: Request, res: Response) => {
       });
     }
 
-    if (!interests || !Array.isArray(interests) || interests.length === 0) {
+    if (interests !== undefined && !Array.isArray(interests)) {
       return res.status(400).json({
-        error: 'Interests are required and must be a non-empty array',
+        error: 'Interests must be an array of strings',
       });
     }
 
-    // Get all places from MongoDB
+    // Get all places from MongoDB (only master records without a tripId)
     const placesCollection = await getCollection(Collections.PLACES);
-    let places = await placesCollection.find({}).toArray();
+    let places = await placesCollection.find({ tripId: { $exists: false } }).toArray();
 
     console.log(`📊 Found ${places.length} total places in database`);
 
@@ -402,15 +406,27 @@ router.post('/suggest-places', async (req: Request, res: Response) => {
     places = places.filter((place: any) => districts.includes(place.district));
     console.log(`📍 After district filter: ${places.length} places`);
 
-    // Filter by interests (categories)
-    places = places.filter((place: any) => interests.includes(place.category));
-    console.log(`🎯 After category filter: ${places.length} places`);
+    // Filter by interests (categories) if interests array is provided and not empty
+    const dbCategories = new Set<string>();
+    if (interests && Array.isArray(interests) && interests.length > 0) {
+      interests.forEach((interest) => {
+        const mapped = INTEREST_TO_CATEGORIES_MAP[interest] || [interest];
+        mapped.forEach((cat) => dbCategories.add(cat));
+      });
+    }
+
+    if (dbCategories.size > 0) {
+      places = places.filter((place: any) => dbCategories.has(place.category));
+      console.log(`🎯 After category filter: ${places.length} places`);
+    } else {
+      console.log(`🎯 Skipping category filter (no interests selected)`);
+    }
 
     // Optional: Filter by budget
     if (budget && travelers && startDate && endDate) {
       // Parse budget range (e.g., "100000-200000")
       const [minBudget, maxBudget] = budget.split('-').map(Number);
-      
+
       // Calculate trip duration
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -427,7 +443,7 @@ router.post('/suggest-places', async (req: Request, res: Response) => {
     }
 
     // Calculate some helpful stats
-    const totalEstimatedCost = places.reduce((sum: number, place: any) => 
+    const totalEstimatedCost = places.reduce((sum: number, place: any) =>
       sum + ((place.estimatedCost || 0) * (travelers || 1)), 0
     );
 
