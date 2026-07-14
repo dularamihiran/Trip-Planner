@@ -94,7 +94,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -222,7 +222,7 @@ export default function DashboardPage() {
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {trips.reduce((sum, trip) => sum + trip.places.length, 0)}
+                {trips.reduce((sum, trip) => sum + (trip.places?.length || 0), 0)}
               </div>
               <div className="text-sm text-gray-600">Places to Visit</div>
             </div>
@@ -233,7 +233,8 @@ export default function DashboardPage() {
               <div className="text-sm text-gray-600">Districts Explored</div>
             </div>
           </div>
-        )}
+        )
+        }
       </main>
     </div>
   );

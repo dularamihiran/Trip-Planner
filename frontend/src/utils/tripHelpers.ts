@@ -193,9 +193,9 @@ export const downloadTripPDF = async (tripId: string): Promise<void> => {
 
     // TODO: Implement actual PDF generation using a library like jsPDF or react-pdf
     // For now, we'll create a simple text representation and trigger download
-    
+
     const pdfContent = generateTripPDFContent(trip);
-    
+
     // Create blob and download
     const blob = new Blob([pdfContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -206,7 +206,7 @@ export const downloadTripPDF = async (tripId: string): Promise<void> => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     console.log(`PDF generation triggered for trip: ${trip.tripName}`);
   } catch (error) {
     console.error('Error generating PDF:', error);
@@ -225,6 +225,7 @@ const generateTripPDFContent = (trip: Trip): string => {
     });
   };
 
+  const places = trip.places || [];
   let content = `
 TRIP ITINERARY
 ==============
@@ -234,11 +235,11 @@ Duration: ${formatDate(trip.startDate)} - ${formatDate(trip.endDate)}
 Status: ${trip.status}
 Districts: ${trip.districts.join(', ')}
 
-PLACES TO VISIT (${trip.places.length})
+PLACES TO VISIT (${places.length})
 ================
 `;
 
-  trip.places.forEach((place, index) => {
+  places.forEach((place, index) => {
     content += `
 ${index + 1}. ${place.name}
    Category: ${place.category}
@@ -281,14 +282,14 @@ export const fetchUserTrips = async (): Promise<Trip[]> => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch trips');
     }
-    
+
     const data = await response.json();
     console.log('Trips fetched from backend:', data);
-    
+
     // Backend returns { trips: [...] }
     return data.trips || [];
   } catch (error) {

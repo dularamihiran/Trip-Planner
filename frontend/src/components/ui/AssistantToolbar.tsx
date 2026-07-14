@@ -25,16 +25,16 @@ export default function AssistantToolbar({
   // Calculate mock ETA and distance (in demo mode)
   const getMockETA = () => {
     if (!userLocation || !currentPlace) return null;
-    
+
     // Mock calculation based on coordinates
-    const latDiff = Math.abs(currentPlace.lat - userLocation.latitude);
-    const lngDiff = Math.abs(currentPlace.lng - userLocation.longitude);
+    const latDiff = Math.abs((currentPlace.lat || 0) - userLocation.latitude);
+    const lngDiff = Math.abs((currentPlace.lng || 0) - userLocation.longitude);
     const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-    
+
     // Convert to approximate km and time
     const estimatedKm = Math.round(distance * 111); // Rough conversion to km
     const estimatedMinutes = Math.round(estimatedKm * 1.5); // ~1.5 min per km
-    
+
     return {
       distance: estimatedKm,
       eta: estimatedMinutes
@@ -88,11 +88,11 @@ export default function AssistantToolbar({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>
-                  {!userLocation && !locationError 
-                    ? 'Getting location...' 
-                    : !currentPlace 
-                    ? 'No active destination' 
-                    : 'Calculating route...'}
+                  {!userLocation && !locationError
+                    ? 'Getting location...'
+                    : !currentPlace
+                      ? 'No active destination'
+                      : 'Calculating route...'}
                 </span>
               </div>
             )}
@@ -173,7 +173,7 @@ export default function AssistantToolbar({
             ) : (
               <span className="text-gray-400">Location: Unavailable</span>
             )}
-            
+
             {currentPlace && (
               <span className="text-emerald-400 font-medium">
                 → {currentPlace.name}

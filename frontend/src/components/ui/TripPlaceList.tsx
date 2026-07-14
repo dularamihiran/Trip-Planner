@@ -14,11 +14,11 @@ interface TripPlaceListProps {
 
 type VisitStatus = 'DONE' | 'NEXT' | 'UPCOMING';
 
-const TripPlaceList: React.FC<TripPlaceListProps> = ({ 
-  places, 
-  tripStatus, 
+const TripPlaceList: React.FC<TripPlaceListProps> = ({
+  places,
+  tripStatus,
   tripId,
-  onMarkDone, 
+  onMarkDone,
   onRemovePlace,
   onStatusChange
 }) => {
@@ -28,17 +28,17 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
   // Get visit status based on actual data
   const getPlaceStatus = (place: Place, index: number): VisitStatus => {
     if (place.visitStatus === 'DONE') return 'DONE';
-    
+
     // If trip is completed, all places are done
     if (tripStatus === 'COMPLETED') return 'DONE';
-    
+
     // If trip is planned, all places are upcoming
     if (tripStatus === 'PLANNED') return 'UPCOMING';
-    
+
     // For IN_PROGRESS or PLANNING trips, find the first non-done place and mark it as NEXT
     const firstNonDoneIndex = places.findIndex(p => p.visitStatus !== 'DONE');
     if (index === firstNonDoneIndex) return 'NEXT';
-    
+
     return 'UPCOMING';
   };
 
@@ -122,10 +122,10 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
             <h2 className="text-xl font-extrabold text-blue-950 group-hover:text-emerald-700 transition-colors">
               Places in Itinerary
             </h2>
-            <svg 
+            <svg
               className={`w-5 h-5 text-gray-500 transform transition-transform group-hover:text-emerald-700 ${isOpen ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
@@ -135,7 +135,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
             {doneCount}/{totalPlaces} Visited
           </span>
         </div>
-        
+
         <div className="flex items-center">
           <a
             href={`/path?tripId=${tripId}`}
@@ -156,7 +156,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
               <span className="text-emerald-700">{Math.round((doneCount / totalPlaces) * 100)}% Complete</span>
             </div>
             <div className="w-full bg-gray-200/80 rounded-full h-3 relative overflow-hidden">
-              <div 
+              <div
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${totalPlaces > 0 ? (doneCount / totalPlaces) * 100 : 0}%` }}
               ></div>
@@ -170,47 +170,44 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
                 const status = getPlaceStatus(place, index);
                 const isLoading = loadingStates[place.placeId];
                 const isRemoving = loadingStates[`remove-${place.placeId}`];
-                
+
                 return (
                   <div key={place.placeId} className="relative group animate-fadeIn">
                     {/* Number Dot Anchor */}
-                    <span 
-                      className={`absolute -left-[37px] md:-left-[41px] top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-all duration-200 z-10 ${
-                        status === 'DONE' 
-                          ? 'bg-emerald-500 text-white border-2 border-white' 
+                    <span
+                      className={`absolute -left-[37px] md:-left-[41px] top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-sm transition-all duration-200 z-10 ${status === 'DONE'
+                          ? 'bg-emerald-500 text-white border-2 border-white'
                           : status === 'NEXT'
-                          ? 'bg-blue-600 text-white border-2 border-white animate-pulse'
-                          : 'bg-white border-2 border-blue-200 text-blue-600'
-                      }`}
+                            ? 'bg-blue-600 text-white border-2 border-white animate-pulse'
+                            : 'bg-white border-2 border-blue-200 text-blue-600'
+                        }`}
                     >
                       {index + 1}
                     </span>
 
                     {/* Card container */}
-                    <div 
-                      className={`border rounded-2xl p-5 transition-all duration-200 ${
-                        status === 'DONE' 
-                          ? 'bg-emerald-50/20 border-emerald-100/60 shadow-sm' 
+                    <div
+                      className={`border rounded-2xl p-5 transition-all duration-200 ${status === 'DONE'
+                          ? 'bg-emerald-50/20 border-emerald-100/60 shadow-sm'
                           : status === 'NEXT'
-                          ? 'bg-blue-50/10 border-blue-200 shadow-md ring-1 ring-blue-100'
-                          : 'bg-gray-50/30 border-gray-150 hover:bg-gray-50/50'
-                      }`}
+                            ? 'bg-blue-50/10 border-blue-200 shadow-md ring-1 ring-blue-100'
+                            : 'bg-gray-50/30 border-gray-150 hover:bg-gray-50/50'
+                        }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         {/* Info details */}
                         <div className="flex-1 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 
-                              className={`text-lg font-bold transition-all ${
-                                status === 'DONE' 
-                                  ? 'line-through text-gray-400 font-medium' 
+                            <h3
+                              className={`text-lg font-bold transition-all ${status === 'DONE'
+                                  ? 'line-through text-gray-400 font-medium'
                                   : 'text-gray-900 font-extrabold'
-                              }`}
+                                }`}
                             >
                               {place.name}
                             </h3>
-                            
-                            <span 
+
+                            <span
                               className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border ${getStatusBadge(status)}`}
                             >
                               <span className="mr-1">{getStatusIcon(status)}</span>
@@ -227,7 +224,7 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
                             <span className="inline-flex items-center text-indigo-900">
                               📍 {place.district}
                             </span>
-                            
+
                             {((place as any).estimatedCost) && (
                               <>
                                 <span className="text-gray-300">•</span>
@@ -240,12 +237,11 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
 
                           {/* Description if present */}
                           {(place as any).description && (
-                            <p 
-                              className={`text-xs leading-relaxed italic max-w-xl font-normal ${
-                                status === 'DONE' ? 'text-gray-400' : 'text-gray-500'
-                              }`}
+                            <p
+                              className={`text-xs leading-relaxed italic max-w-xl font-normal ${status === 'DONE' ? 'text-gray-400' : 'text-gray-500'
+                                }`}
                             >
-                              "{((place as any).description)}"
+                              &ldquo;{((place as any).description)}&rdquo;
                             </p>
                           )}
                         </div>
@@ -262,11 +258,10 @@ const TripPlaceList: React.FC<TripPlaceListProps> = ({
                               <select
                                 value={place.visitStatus || 'PLANNED'}
                                 onChange={(e) => handleStatusChange(place.placeId, e.target.value as 'PLANNED' | 'DONE')}
-                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition-colors shadow-sm ${
-                                  place.visitStatus === 'DONE'
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500 transition-colors shadow-sm ${place.visitStatus === 'DONE'
                                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
                                     : 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
-                                }`}
+                                  }`}
                               >
                                 <option value="PLANNED">📅 Planned</option>
                                 <option value="DONE">✅ Completed</option>

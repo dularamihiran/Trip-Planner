@@ -68,7 +68,7 @@ export default function AiRecommendations({
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getAiRecommendations({
         districts,
         interests,
@@ -77,7 +77,7 @@ export default function AiRecommendations({
       });
 
       setRecommendations(response);
-      
+
       // Reset active day to day1
       if (response && response.itinerary) {
         const daysKeys = Object.keys(response.itinerary);
@@ -103,10 +103,10 @@ export default function AiRecommendations({
   // Helper to find a database place by name
   const findDbPlaceByName = (name: string): AppPlace | undefined => {
     if (!name) return undefined;
-    
+
     // Attempt exact match or substring match
     return suggestedPlaces.find(
-      (p) => 
+      (p) =>
         p.name.toLowerCase().trim() === name.toLowerCase().trim() ||
         p.name.toLowerCase().trim().includes(name.toLowerCase().trim()) ||
         name.toLowerCase().trim().includes(p.name.toLowerCase().trim())
@@ -127,7 +127,7 @@ export default function AiRecommendations({
       alert(`Could not find coordinates for "${name}" in database places. You can search for it in the search bar below!`);
       return;
     }
-    
+
     const isSelected = selectedPlaces.some((p) => p.id === dbPlace.id);
     if (isSelected) {
       onRemoveFromPath(dbPlace.id);
@@ -163,7 +163,7 @@ export default function AiRecommendations({
             <div className="w-16 h-16 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center text-xl">🤖</div>
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-gray-900">AI Travel Assistant is planning...</h3>
             <p className="text-emerald-700 font-medium text-sm transition-opacity duration-500 ease-in-out">
@@ -248,7 +248,7 @@ export default function AiRecommendations({
           {recommendedPlaces.map((place: RecommendedPlace, index: number) => {
             const dbPlace = findDbPlaceByName(place.name);
             const isSelected = isPlaceSelected(place.name);
-            
+
             return (
               <div
                 key={index}
@@ -265,7 +265,7 @@ export default function AiRecommendations({
                       </span>
                     )}
                   </div>
-                  
+
                   {dbPlace && (
                     <p className="text-gray-500 text-xs font-medium mb-3 flex items-center">
                       <span className="mr-1">📍</span> {dbPlace.address} District
@@ -282,7 +282,7 @@ export default function AiRecommendations({
                   )}
 
                   <p className="text-gray-700 text-sm leading-relaxed mb-4 italic">
-                    "{place.reason}"
+                    &ldquo;{place.reason}&rdquo;
                   </p>
                 </div>
 
@@ -290,11 +290,10 @@ export default function AiRecommendations({
                   {dbPlace && (
                     <button
                       onClick={() => handleTogglePlace(place.name)}
-                      className={`inline-flex items-center text-xs font-semibold px-4 py-2 rounded-lg transition-colors duration-200 ${
-                        isSelected
+                      className={`inline-flex items-center text-xs font-semibold px-4 py-2 rounded-lg transition-colors duration-200 ${isSelected
                           ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-100'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      }`}
+                        }`}
                     >
                       {isSelected ? (
                         <>
@@ -330,7 +329,7 @@ export default function AiRecommendations({
               Geographically optimized route path across your travel duration
             </p>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
             {itinerary && (
               <button
@@ -346,12 +345,12 @@ export default function AiRecommendations({
                       });
                     }
                   });
-                  
+
                   if (itineraryPlaces.length === 0) {
                     alert('No matching database places found to apply.');
                     return;
                   }
-                  
+
                   onApplyItinerary(itineraryPlaces);
                 }}
                 className="text-xs font-bold px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow transition-colors flex items-center"
@@ -376,16 +375,15 @@ export default function AiRecommendations({
           {daysKeys.map((dayKey) => {
             const isActive = activeDay === dayKey;
             const dayNumber = dayKey.replace('day', '');
-            
+
             return (
               <button
                 key={dayKey}
                 onClick={() => setActiveDay(dayKey)}
-                className={`px-5 py-2.5 font-bold text-sm rounded-xl border transition-all duration-200 flex items-center ${
-                  isActive
+                className={`px-5 py-2.5 font-bold text-sm rounded-xl border transition-all duration-200 flex items-center ${isActive
                     ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <span className="mr-1.5">📅</span> Day {dayNumber}
               </button>
@@ -399,7 +397,7 @@ export default function AiRecommendations({
             itinerary[activeDay].map((placeName: string, index: number) => {
               const dbPlace = findDbPlaceByName(placeName);
               const isSelected = isPlaceSelected(placeName);
-              
+
               return (
                 <div key={index} className="relative group">
                   {/* Timeline Dot Icon */}
@@ -421,7 +419,7 @@ export default function AiRecommendations({
                             <>
                               <span>•</span>
                               <span className="text-gray-600 line-clamp-1 italic font-normal">
-                                "{dbPlace.description}"
+                                &ldquo;{dbPlace.description}&rdquo;
                               </span>
                             </>
                           )}
@@ -437,11 +435,10 @@ export default function AiRecommendations({
                       {dbPlace ? (
                         <button
                           onClick={() => handleTogglePlace(placeName)}
-                          className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                            isSelected
+                          className={`inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${isSelected
                               ? 'bg-red-50 text-red-700 border-red-100 hover:bg-red-100'
                               : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
-                          }`}
+                            }`}
                         >
                           {isSelected ? '➖ Remove' : '➕ Add to Path'}
                         </button>

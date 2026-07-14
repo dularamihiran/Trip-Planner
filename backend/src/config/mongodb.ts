@@ -5,6 +5,59 @@ import dns from 'dns';
 // Override default DNS servers with public DNS (Google & Cloudflare) to resolve Atlas clusters when local ISPs fail.
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 
+const resolver = new dns.Resolver();
+resolver.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+
+// Custom lookup to ensure MongoClient resolves hostnames (including replica set nodes) via public DNS.
+const customLookup = (
+  hostname: string,
+  options: any,
+  callback: (err: any, address: any, family?: number) => void
+) => {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  const family = options.family || 0;
+  const all = options.all || false;
+
+  const handleResolveResult = (err: any, addresses: string[], addressFamily: number) => {
+    if (err || !addresses || addresses.length === 0) {
+      dns.lookup(hostname, options, callback);
+      return;
+    }
+
+    if (all) {
+      const results = addresses.map(addr => ({ address: addr, family: addressFamily }));
+      callback(null, results);
+    } else {
+      callback(null, addresses[0], addressFamily);
+    }
+  };
+
+  if (family === 6) {
+    resolver.resolve6(hostname, (err, addresses) => {
+      if (err || !addresses || addresses.length === 0) {
+        resolver.resolve4(hostname, (err4, addresses4) => {
+          handleResolveResult(err4, addresses4 || [], 4);
+        });
+      } else {
+        handleResolveResult(null, addresses, 6);
+      }
+    });
+  } else {
+    resolver.resolve4(hostname, (err, addresses) => {
+      if (err || !addresses || addresses.length === 0) {
+        resolver.resolve6(hostname, (err6, addresses6) => {
+          handleResolveResult(err6, addresses6 || [], 6);
+        });
+      } else {
+        handleResolveResult(null, addresses, 4);
+      }
+    });
+  }
+};
+
 dotenv.config();
 
 const uri = process.env.MONGODB_URI || '';
@@ -29,6 +82,7 @@ export const initializeMongoDB = async (): Promise<void> => {
         maxPoolSize: 10,
         minPoolSize: 2,
         serverSelectionTimeoutMS: 5000,
+        lookup: customLookup,
       });
       clientPromise = client.connect();
     }
@@ -56,6 +110,7 @@ export const getDatabase = async (): Promise<Db> => {
       client = new MongoClient(uri, {
         maxPoolSize: 10,
         minPoolSize: 2,
+        lookup: customLookup,
       });
       clientPromise = client.connect();
     }

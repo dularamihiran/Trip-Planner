@@ -120,12 +120,6 @@ trip-planner/
 - `PUT /api/trips/:id` - Update trip plan
 - `DELETE /api/trips/:id` - Delete trip plan
 
-### Hotels
-- `GET /api/hotels?district=Kandy` - Get hotels by district
-- `POST /api/hotels` - Register hotel (hotel owner)
-- `POST /api/bookings` - Book a hotel
-- `GET /api/bookings/:userId` - Get user's bookings
-
 ### Authentication
 - `POST /api/auth/signup` - User registration
 - `POST /api/auth/login` - User login
@@ -144,7 +138,6 @@ trip-planner/
 - 🔄 Place cards with images and details
 - 🔄 Interactive map with route visualization
 - 🔄 Trip itinerary builder
-- 🔄 Hotel booking forms
 - 🔄 User authentication forms
 
 ## 🌏 Sri Lanka Districts & Categories
@@ -177,7 +170,6 @@ trip-planner/
 - Google Maps integration
 - Authentication implementation
 - Image upload functionality
-- Hotel booking system
 - Trip optimization algorithms
 
 ## 📄 License
