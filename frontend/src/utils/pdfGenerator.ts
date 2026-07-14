@@ -13,7 +13,7 @@ interface PDFGenerationOptions {
 // Initialize jsPDF
 const initializeJsPDF = async (): Promise<boolean> => {
   if (typeof window === 'undefined') return false;
-  
+
   try {
     if (!jsPDF) {
       const jsPDFModule = await import('jspdf');
@@ -85,7 +85,7 @@ const calculateDuration = (startDate: string, endDate: string): number => {
 
 // Generate PDF using jsPDF (if available)
 export const generateTripPDF = async (
-  trip: Trip, 
+  trip: Trip,
   options: PDFGenerationOptions = {}
 ): Promise<void> => {
   const {
@@ -113,6 +113,7 @@ export const generateTripPDF = async (
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
+    const places = trip.places || [];
 
     // Title
     doc.setFontSize(24);
@@ -139,7 +140,7 @@ export const generateTripPDF = async (
     doc.setFont('helvetica', 'normal');
     doc.text(`Status: ${trip.status.replace('_', ' ')}`, margin, yPosition);
     yPosition += 6;
-    doc.text(`Total Places: ${trip.places.length}`, margin, yPosition);
+    doc.text(`Total Places: ${places.length}`, margin, yPosition);
     yPosition += 15;
 
     // Places Table
@@ -153,7 +154,7 @@ export const generateTripPDF = async (
     doc.setFont('helvetica', 'bold');
     const colWidths = [15, 60, 40, 35];
     const startX = margin;
-    
+
     doc.text('#', startX, yPosition);
     doc.text('Place Name', startX + colWidths[0], yPosition);
     doc.text('District', startX + colWidths[0] + colWidths[1], yPosition);
@@ -166,7 +167,7 @@ export const generateTripPDF = async (
 
     // Places data
     doc.setFont('helvetica', 'normal');
-    trip.places.forEach((place, index) => {
+    places.forEach((place, index) => {
       if (yPosition > 250) { // Start new page if needed
         doc.addPage();
         yPosition = 20;
@@ -183,8 +184,8 @@ export const generateTripPDF = async (
 
     // Add map if requested
     if (includeMap) {
-      const staticMapUrl = mapImageUrl || generateStaticMapUrl(trip.places);
-      
+      const staticMapUrl = mapImageUrl || generateStaticMapUrl(places);
+
       try {
         // Add map image
         doc.setFontSize(16);
@@ -198,7 +199,7 @@ export const generateTripPDF = async (
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
           doc.text('Map visualization showing your Sri Lanka trip route', margin, yPosition);
-          doc.text(`${trip.places.length} destinations across ${trip.districts.length} districts`, margin, yPosition + 6);
+          doc.text(`${places.length} destinations across ${trip.districts.length} districts`, margin, yPosition + 6);
           yPosition += 20;
         } else {
           // TODO: Add actual map image when API key is available
@@ -239,6 +240,7 @@ export const generateTripPDF = async (
 // Generate HTML content for printing
 const generatePrintHTML = (trip: Trip): string => {
   const duration = calculateDuration(trip.startDate, trip.endDate);
+  const places = trip.places || [];
 
   return `
     <!DOCTYPE html>
@@ -344,7 +346,7 @@ const generatePrintHTML = (trip: Trip): string => {
         </div>
 
         <div class="section-title">Trip Overview</div>
-        <p><strong>Total Places:</strong> ${trip.places.length}</p>
+        <p><strong>Total Places:</strong> ${places.length}</p>
         <p><strong>Districts Covered:</strong> ${trip.districts.join(', ')}</p>
 
         <div class="section-title">Itinerary</div>
@@ -358,7 +360,7 @@ const generatePrintHTML = (trip: Trip): string => {
             </tr>
           </thead>
           <tbody>
-            ${trip.places.map((place, index) => `
+            ${places.map((place, index) => `
               <tr>
                 <td>${index + 1}</td>
                 <td>${place.name}</td>
@@ -389,7 +391,7 @@ export const printTripItinerary = (trip: Trip): void => {
   const htmlContent = generatePrintHTML(trip);
   printWindow.document.write(htmlContent);
   printWindow.document.close();
-  
+
   // Wait for content to load then print
   printWindow.onload = () => {
     setTimeout(() => {

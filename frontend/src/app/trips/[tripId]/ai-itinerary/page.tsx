@@ -22,7 +22,7 @@ export default function AiItineraryPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch trip main details
       const response = await fetch(`http://localhost:5000/api/trips/${tripId}`, {
         method: 'GET',
@@ -30,16 +30,16 @@ export default function AiItineraryPage() {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('Trip not found');
         }
         throw new Error('Failed to fetch trip details');
       }
-      
+
       const tripData = await response.json();
-      
+
       // Fetch detailed places associated with this trip
       let fullPlaces: Place[] = [];
       try {
@@ -49,7 +49,7 @@ export default function AiItineraryPage() {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (placesResponse.ok) {
           const placesData = await placesResponse.json();
           fullPlaces = placesData.places || [];
@@ -57,12 +57,12 @@ export default function AiItineraryPage() {
       } catch (placeErr) {
         console.error('Error fetching trip places:', placeErr);
       }
-      
+
       const mergedTripData = {
         ...tripData,
         places: fullPlaces,
       };
-      
+
       setTrip(mergedTripData);
 
       // Now load or generate AI optimized itinerary
@@ -197,7 +197,7 @@ export default function AiItineraryPage() {
           >
             ← Back to Dashboard
           </Link>
-          
+
           <Link
             href={`/trips/${tripId}`}
             className="inline-flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
@@ -222,10 +222,10 @@ export default function AiItineraryPage() {
 
         {/* Two-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* LEFT COLUMN: Day-by-Day AI Suggestions (2/3 width) */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {loadingAi && (
               <div className="bg-white rounded-2xl shadow p-8 text-center animate-pulse">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -259,7 +259,7 @@ export default function AiItineraryPage() {
                     <div className="relative border-l-2 border-blue-100 ml-4 pl-6 md:pl-8 space-y-6 py-2">
                       {dayData.places.map((placeName: string, index: number) => {
                         const placeDetails = getPlaceByName(placeName);
-                        
+
                         return (
                           <div key={index} className="relative group">
                             {/* Marker Icon */}
@@ -271,7 +271,7 @@ export default function AiItineraryPage() {
                               <h4 className="text-base font-bold text-gray-950">
                                 {placeName}
                               </h4>
-                              
+
                               {placeDetails ? (
                                 <div className="mt-2 text-xs text-gray-600 leading-relaxed space-y-1">
                                   <p className="font-semibold text-emerald-800">
@@ -279,7 +279,7 @@ export default function AiItineraryPage() {
                                   </p>
                                   {(placeDetails as any).description && (
                                     <p className="text-gray-500 italic mt-1 font-normal">
-                                      "{(placeDetails as any).description}"
+                                      &ldquo;{(placeDetails as any).description}&rdquo;
                                     </p>
                                   )}
                                 </div>
@@ -314,7 +314,7 @@ export default function AiItineraryPage() {
 
           {/* RIGHT COLUMN: Route Map (1/3 width) */}
           <div className="lg:col-span-1">
-            <MapPanel 
+            <MapPanel
               places={trip.places || []}
               tripName={trip.tripName}
             />
