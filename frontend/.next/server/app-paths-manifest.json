@@ -1,8 +1,8 @@
 {
+  "/page": "app/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/trips/[tripId]/page": "app/trips/[tripId]/page.js",
-  "/profile/page": "app/profile/page.js",
   "/trip/page": "app/trip/page.js",
-  "/path/page": "app/path/page.js",
-  "/trips/[tripId]/ai-itinerary/page": "app/trips/[tripId]/ai-itinerary/page.js"
+  "/trips/[tripId]/ai-itinerary/page": "app/trips/[tripId]/ai-itinerary/page.js",
+  "/trips/[tripId]/page": "app/trips/[tripId]/page.js",
+  "/path/page": "app/path/page.js"
 }

@@ -104,28 +104,24 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// Start server (only if not in Lambda environment)
-if (process.env.NODE_ENV !== 'production' || !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-  // Initialize MongoDB before starting server
-  initializeMongoDB()
-    .then(() => {
-      console.log('✅ Database initialized successfully');
+// Initialize MongoDB before starting server
+initializeMongoDB()
+  .then(() => {
+    console.log('✅ Database initialized successfully');
 
-      app.listen(PORT, () => {
-        console.log('='.repeat(60));
-        console.log(`🚀 Smart Trip Planner API Server`);
-        console.log(`📍 Server running on: http://localhost:${PORT}`);
-        console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`📊 Database: MongoDB (${process.env.DB_NAME || 'trip_planner'})`);
-        console.log('='.repeat(60));
-      });
-    })
-    .catch((error) => {
-      console.error('❌ Failed to initialize database:', error);
-      process.exit(1);
+    app.listen(PORT, () => {
+      console.log('='.repeat(60));
+      console.log(`🚀 Smart Trip Planner API Server`);
+      console.log(`📍 Server running on: http://localhost:${PORT}`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Database: MongoDB (${process.env.DB_NAME || 'trip_planner'})`);
+      console.log('='.repeat(60));
     });
-}
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize database:', error);
+    process.exit(1);
+  });
 
-// Export app for Lambda handler
 export default app;

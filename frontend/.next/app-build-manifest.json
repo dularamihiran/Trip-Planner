@@ -26,11 +26,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/trips/[tripId]/page.js"
     ],
-    "/profile/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
-    ],
     "/trip/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
