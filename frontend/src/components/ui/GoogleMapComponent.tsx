@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, InfoWindow } from '@react-google-maps/api';
 import { Place } from '@/app/path/page';
 
@@ -11,6 +11,7 @@ interface GoogleMapComponentProps {
   startPoint?: string;
   startPointLat?: number;
   startPointLng?: number;
+  onRouteCalculated?: (distanceKm: number, durationText: string) => void;
 }
 
 const mapContainerStyle = {
@@ -33,13 +34,19 @@ export default function GoogleMapComponent({
   onPlaceSelect,
   startPoint,
   startPointLat,
-  startPointLng
+  startPointLng,
+  onRouteCalculated
 }: GoogleMapComponentProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directionsResponse, setDirectionsResponse] = useState<google.maps.DirectionsResult | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [resolvedStartPoint, setResolvedStartPoint] = useState<Place | null>(null);
+
+  const onRouteCalculatedRef = useRef(onRouteCalculated);
+  useEffect(() => {
+    onRouteCalculatedRef.current = onRouteCalculated;
+  }, [onRouteCalculated]);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
@@ -114,6 +121,8 @@ export default function GoogleMapComponent({
     ]
   };
 
+  const routeSignature = allPlacesForRoute.map(p => `${p.id}-${p.lat || 0}-${p.lng || 0}`).join('|');
+
   // Calculate and display route when allPlacesForRoute changes
   const calculateRoute = useCallback(async () => {
     // Filter places that have valid coordinates
@@ -140,12 +149,26 @@ export default function GoogleMapComponent({
       });
 
       setDirectionsResponse(results);
+
+      // Invoke callback with actual total distance & duration if defined
+      if (onRouteCalculatedRef.current) {
+        const totalDistanceMeters = results.routes[0].legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
+        const totalDurationSeconds = results.routes[0].legs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
+
+        const distanceKm = Math.round(totalDistanceMeters / 1000);
+        const totalTimeMinutes = Math.round(totalDurationSeconds / 60);
+        const hours = Math.floor(totalTimeMinutes / 60);
+        const mins = totalTimeMinutes % 60;
+        const durationText = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+        onRouteCalculatedRef.current(distanceKm, durationText);
+      }
     } catch (error) {
       console.error('Error calculating route:', error);
     } finally {
       setIsCalculatingRoute(false);
     }
-  }, [allPlacesForRoute]);
+  }, [routeSignature]);
 
   useEffect(() => {
     if (allPlacesForRoute.length >= 2 && map) {
@@ -153,7 +176,7 @@ export default function GoogleMapComponent({
     } else {
       setDirectionsResponse(null);
     }
-  }, [allPlacesForRoute, map, calculateRoute]);
+  }, [routeSignature, map, calculateRoute]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);

@@ -317,6 +317,9 @@ export default function AiItineraryPage() {
             <MapPanel
               places={trip.places || []}
               tripName={trip.tripName}
+              startPoint={trip.startPoint}
+              startPointLat={trip.startPointLat}
+              startPointLng={trip.startPointLng}
             />
           </div>
 
