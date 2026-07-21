@@ -315,14 +315,32 @@ export default function PathCreationPage() {
     loadFromDatabaseOrStorage();
   }, []);
 
-  // Calculate route statistics when selected places change
+  // Calculate route statistics when selected places change or tripInfo changes
   useEffect(() => {
     const calculateRouteStats = () => {
+      // Find start point coordinates if available
+      const startPointPlace = tripInfo?.startPointLat && tripInfo?.startPointLng ? {
+        lat: typeof tripInfo.startPointLat === 'string' ? parseFloat(tripInfo.startPointLat) : tripInfo.startPointLat,
+        lng: typeof tripInfo.startPointLng === 'string' ? parseFloat(tripInfo.startPointLng) : tripInfo.startPointLng,
+      } : null;
+
+      // Group all points including startPoint
+      const points = startPointPlace
+        ? [startPointPlace, ...selectedPlaces]
+        : selectedPlaces;
+
+      // If we don't have enough points for a route, reset
+      if (points.length < 2) {
+        setTotalDistance(0);
+        setTotalDuration('');
+        return;
+      }
+
       // Proper Haversine formula for accurate distance calculation
       let distance = 0;
-      for (let i = 0; i < selectedPlaces.length - 1; i++) {
-        const place1 = selectedPlaces[i];
-        const place2 = selectedPlaces[i + 1];
+      for (let i = 0; i < points.length - 1; i++) {
+        const place1 = points[i];
+        const place2 = points[i + 1];
 
         // Haversine formula for great-circle distance
         const R = 6371; // Earth's radius in km
@@ -339,19 +357,15 @@ export default function PathCreationPage() {
 
       setTotalDistance(Math.round(distance));
 
-      // Estimate driving time (assuming average 40km/h for Sri Lankan roads)
-      const hours = Math.floor(distance / 40);
-      const minutes = Math.round((distance % 40) * 1.5);
-      setTotalDuration(`${hours}h ${minutes}m`);
+      // Estimate driving time (assuming average 50km/h for Sri Lankan roads)
+      const totalMinutes = Math.round((distance / 50) * 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      setTotalDuration(hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
     };
 
-    if (selectedPlaces.length > 1) {
-      calculateRouteStats();
-    } else {
-      setTotalDistance(0);
-      setTotalDuration('');
-    }
-  }, [selectedPlaces]);
+    calculateRouteStats();
+  }, [selectedPlaces, tripInfo]);
 
   const handleAddToPath = (place: Place) => {
     // Prevent duplicate additions by name
@@ -620,6 +634,10 @@ export default function PathCreationPage() {
                 startPoint={tripInfo?.startPoint}
                 startPointLat={tripInfo?.startPointLat}
                 startPointLng={tripInfo?.startPointLng}
+                onRouteCalculated={(distance, duration) => {
+                  setTotalDistance(distance);
+                  setTotalDuration(duration);
+                }}
               />
             </div>
           </div>

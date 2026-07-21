@@ -1,7 +1,7 @@
 'use client';
 
 import { Place } from '@/types/trip';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import GoogleMapComponent from './GoogleMapComponent';
 
 interface MapPanelProps {
@@ -14,24 +14,52 @@ interface MapPanelProps {
 
 const MapPanel: React.FC<MapPanelProps> = ({ places, tripName, startPoint, startPointLat, startPointLng }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [realDistance, setRealDistance] = useState<string>('');
+  const [realDuration, setRealDuration] = useState<string>('');
+
+  // Clear real stats when places input changes (e.g. place checked/unchecked) to trigger recalculation
+  useEffect(() => {
+    setRealDistance('');
+    setRealDuration('');
+  }, [places]);
 
   // Filter out places that are already completed (visitStatus === 'DONE')
+  const completedPlaces = places.filter(p => p.visitStatus === 'DONE');
   const remainingPlaces = places.filter(p => p.visitStatus !== 'DONE');
+  const hasCompletedPlaces = completedPlaces.length > 0;
 
-  const startPointPlace = startPoint && startPointLat && startPointLng ? [{
-    id: 'start-point',
-    name: `Start: ${startPoint}`,
-    category: 'Start',
-    address: startPoint,
-    lat: typeof startPointLat === 'string' ? parseFloat(startPointLat) : startPointLat,
-    lng: typeof startPointLng === 'string' ? parseFloat(startPointLng) : startPointLng,
-    description: 'Trip Starting Location',
-    isSelected: true,
-  }] : [];
+  // Decide the active start point: if any place has been completed, start route from the last completed place.
+  let route起点: any[] = [];
+  if (hasCompletedPlaces) {
+    const lastCompleted = completedPlaces[completedPlaces.length - 1];
+    const crudeLat = lastCompleted.lat || (lastCompleted as any).latitude || 0;
+    const crudeLng = lastCompleted.lng || (lastCompleted as any).longitude || 0;
+    route起点 = [{
+      id: lastCompleted.placeId,
+      name: `Visited: ${lastCompleted.name}`,
+      category: 'Start', // Treated as start marker
+      address: lastCompleted.district,
+      lat: typeof crudeLat === 'string' ? parseFloat(crudeLat) : crudeLat,
+      lng: typeof crudeLng === 'string' ? parseFloat(crudeLng) : crudeLng,
+      description: (lastCompleted as any).description || 'Last visited location',
+      isSelected: true,
+    }];
+  } else if (startPoint && startPointLat && startPointLng) {
+    route起点 = [{
+      id: 'start-point',
+      name: `Start: ${startPoint}`,
+      category: 'Start',
+      address: startPoint,
+      lat: typeof startPointLat === 'string' ? parseFloat(startPointLat) : startPointLat,
+      lng: typeof startPointLng === 'string' ? parseFloat(startPointLng) : startPointLng,
+      description: 'Trip Starting Location',
+      isSelected: true,
+    }];
+  }
 
   // Map remaining places to the format expected by GoogleMapComponent
   const mappedPlacesForMap = [
-    ...startPointPlace,
+    ...route起点,
     ...remainingPlaces.map((p) => {
       const crudeLat = p.lat || (p as any).latitude || 0;
       const crudeLng = p.lng || (p as any).longitude || 0;
@@ -48,24 +76,40 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName, startPoint, start
     })
   ];
 
-  // Calculate mock distance and time based on mapped route stops (including start point)
-  const calculateTripStats = () => {
-    if (mappedPlacesForMap.length < 2) {
+  // Fallback calculation using Haversine on actual coordinates
+  const calculateFallbackStats = () => {
+    const points = mappedPlacesForMap.filter(p => p.lat != null && p.lng != null);
+    if (points.length < 2) {
       return { distance: '0 km', time: '0 min' };
     }
 
-    const avgDistancePerLeg = 85; // Average km between places in Sri Lanka
-    const avgSpeedKmh = 45; // Average speed including stops
+    let distance = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const place1 = points[i];
+      const place2 = points[i + 1];
 
-    const totalDistance = (mappedPlacesForMap.length - 1) * avgDistancePerLeg;
-    const totalTimeHours = totalDistance / avgSpeedKmh;
-    const totalTimeMinutes = Math.round(totalTimeHours * 60);
+      // Haversine formula
+      const R = 6371; // Earth's radius in km
+      const dLat = (place2.lat - place1.lat) * Math.PI / 180;
+      const dLng = (place2.lng - place1.lng) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(place1.lat * Math.PI / 180) * Math.cos(place2.lat * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const segmentDistance = R * c;
+      distance += segmentDistance;
+    }
+
+    const roundedDistance = Math.round(distance);
+    const totalMinutes = Math.round((distance / 50) * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const durationText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 
     return {
-      distance: `${totalDistance} km`,
-      time: totalTimeMinutes > 60
-        ? `${Math.floor(totalTimeMinutes / 60)}h ${totalTimeMinutes % 60}m`
-        : `${totalTimeMinutes}m`
+      distance: `${roundedDistance} km`,
+      time: durationText
     };
   };
 
@@ -86,7 +130,11 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName, startPoint, start
     return icons[category] || '📍';
   };
 
-  const stats = calculateTripStats();
+  const fallbackStats = calculateFallbackStats();
+  const stats = {
+    distance: realDistance || fallbackStats.distance,
+    time: realDuration || fallbackStats.time
+  };
   const completedCount = places.length - remainingPlaces.length;
 
   return (
@@ -115,9 +163,13 @@ const MapPanel: React.FC<MapPanelProps> = ({ places, tripName, startPoint, start
               ? { lat: mappedPlacesForMap[0].lat, lng: mappedPlacesForMap[0].lng }
               : { lat: 7.8731, lng: 80.7718 } // Center of Sri Lanka
           }
-          startPoint={startPoint}
-          startPointLat={startPointLat}
-          startPointLng={startPointLng}
+          startPoint={hasCompletedPlaces ? undefined : startPoint}
+          startPointLat={hasCompletedPlaces ? undefined : startPointLat}
+          startPointLng={hasCompletedPlaces ? undefined : startPointLng}
+          onRouteCalculated={(distance, duration) => {
+            setRealDistance(`${distance} km`);
+            setRealDuration(duration);
+          }}
         />
       </div>
 

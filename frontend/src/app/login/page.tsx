@@ -43,6 +43,7 @@ export default function LoginPage() {
         }
       } else {
         setError(response.error || 'Login failed. Please check your credentials.');
+        
       }
     } catch (err: any) {
       console.error('Login error:', err);
